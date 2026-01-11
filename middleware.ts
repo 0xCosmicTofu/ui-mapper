@@ -1,6 +1,8 @@
 import { auth } from "./auth";
 import { NextResponse } from "next/server";
 
+export const runtime = "edge";
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
