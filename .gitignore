@@ -27,6 +27,13 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.bak
+
+# production env files (contain secrets - DO NOT COMMIT)
+.env.vercel
+.env.vercel.bak
+.env.production
+.env.production.local
 
 # vercel
 .vercel
