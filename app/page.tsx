@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AnalysisResult, WebflowExport } from "@/lib/types";
+import { MappingGraph } from "./components/MappingGraph";
 
 type AnalysisState = {
   status: "idle" | "analyzing" | "success" | "error";
@@ -186,6 +187,21 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Visual Graph */}
+            <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
+              <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
+                Mapping Visualization
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                Interactive graph showing relationships between content models and UI components
+              </p>
+              <MappingGraph
+                models={state.analysis.contentModels}
+                components={state.analysis.uiComponents}
+                mappings={state.analysis.mappings}
+              />
             </div>
 
             {/* Content Models */}
