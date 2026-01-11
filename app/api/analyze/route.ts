@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { SiteAnalyzer } from "@/lib/services/analyzer";
 import { z } from "zod";
 
@@ -8,6 +9,18 @@ const AnalyzeRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized. Please sign in to use this feature.",
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { url } = AnalyzeRequestSchema.parse(body);
 

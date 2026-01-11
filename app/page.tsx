@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AnalysisResult, WebflowExport } from "@/lib/types";
 import { MappingGraph } from "./components/MappingGraph";
+import { UserMenu } from "./components/UserMenu";
 
 type AnalysisState = {
   status: "idle" | "analyzing" | "success" | "error";
@@ -89,13 +90,16 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-16 max-w-6xl">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Webflow UI Mapper
-          </h1>
-          <p className="text-xl text-zinc-600 dark:text-zinc-400">
-            Transform any website into Webflow Collections, Symbols, and Bindings
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div className="text-center flex-1">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Webflow UI Mapper
+            </h1>
+            <p className="text-xl text-zinc-600 dark:text-zinc-400">
+              Transform any website into Webflow Collections, Symbols, and Bindings
+            </p>
+          </div>
+          <UserMenu />
         </div>
 
         <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8 mb-8">

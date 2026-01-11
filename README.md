@@ -21,6 +21,8 @@ Transform any website into Webflow Collections, Symbols, and Bindings using AI-p
 - **Explicit Mappings**: Creates clear bindings between models and component slots
 - **Webflow Export**: Generates ready-to-import JSON and CSV files
 - **Full Page Screenshots**: Visual reference for analysis
+- **User Authentication**: Email/password and Google OAuth sign-in
+- **Protected Routes**: Analysis features require user authentication
 
 ## 🚀 Quick Start
 
@@ -48,31 +50,62 @@ npx playwright install chromium
 cp .env.example .env
 ```
 
-Edit `.env` and add your API key:
-```
-VENICE_API_KEY=your_key_here  # Required
-VENICE_MODEL_ID=claude-opus-4.5  # Optional - defaults to claude-opus-4.5
+Edit `.env` and configure:
+```bash
+# Required: Venice API Key
+VENICE_API_KEY=your_key_here
+VENICE_MODEL_ID=claude-opus-45  # Optional - defaults to claude-opus-45
+
+# Required: Authentication
+AUTH_SECRET=your_auth_secret_here  # Generate with: openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:3000  # Your app URL
+
+# Required: Database
+DATABASE_URL="file:./dev.db"  # SQLite for development
+
+# Optional: Google OAuth (for Google sign-in)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
-4. **Run the development server**:
+4. **Initialize the database**:
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+5. **Run the development server**:
 ```bash
 npm run dev
 ```
 
-5. **Open your browser**:
+6. **Open your browser**:
 Navigate to [http://localhost:3000](http://localhost:3000)
+
+### Setting Up Google OAuth (Optional)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
+5. Configure OAuth consent screen
+6. Set authorized redirect URIs: `http://localhost:3000/api/auth/callback/google` (for development)
+7. Copy the Client ID and Client Secret to your `.env` file
 
 ## 📖 Usage
 
-1. **Enter a URL**: Paste the website URL you want to analyze (e.g., `https://token2049.com/dubai`)
-2. **Click "Analyze"**: The system will:
+1. **Sign In or Sign Up**: 
+   - Create an account with email/password, or
+   - Sign in with Google (if configured)
+2. **Enter a URL**: Paste the website URL you want to analyze (e.g., `https://token2049.com/dubai`)
+3. **Click "Analyze"**: The system will:
    - Scrape the website (DOM + screenshot)
    - Detect UI components using AI vision
    - Extract content models
    - Create explicit mappings
    - Generate Webflow export
-3. **Review Results**: See content models, UI components, and mappings
-4. **Export**: Download JSON or CSV files for Webflow import
+4. **Review Results**: See content models, UI components, and mappings
+5. **Export**: Download JSON or CSV files for Webflow import
 
 ## 🏗️ Architecture
 
@@ -165,8 +198,16 @@ Expected output:
 
 ### Environment Variables
 
-- `VENICE_API_KEY`: **Required** - Used for all AI analysis (component detection, content modeling, mappings) via Venice API
-- `VENICE_MODEL_ID`: **Optional** - Model to use (defaults to `claude-opus-4.5`). Other options: `mistral-31-24b` (vision), `zai-org-glm-4.6` (reasoning)
+**Required:**
+- `VENICE_API_KEY`: Used for all AI analysis (component detection, content modeling, mappings) via Venice API
+- `AUTH_SECRET`: Secret key for NextAuth.js (generate with `openssl rand -base64 32`)
+- `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000` for dev, `https://yourdomain.com` for production)
+- `DATABASE_URL`: Database connection string (SQLite: `file:./dev.db`, PostgreSQL: connection string)
+
+**Optional:**
+- `VENICE_MODEL_ID`: Model to use (defaults to `claude-opus-45`). Other options: `mistral-31-24b` (vision), `zai-org-glm-4.6` (reasoning)
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID (for Google sign-in)
+- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret (for Google sign-in)
 - `WEBFLOW_API_KEY`: Optional, for direct Webflow API integration (future)
 
 ### Timeout Settings
