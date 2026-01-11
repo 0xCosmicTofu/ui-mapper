@@ -214,18 +214,18 @@ export default function Home() {
                 Content Models ({state.analysis.contentModels.length})
               </h2>
               <div className="space-y-4">
-                {state.analysis.contentModels.map((model) => (
+                {state.analysis.contentModels.map((model, modelIndex) => (
                   <div
-                    key={model.name}
+                    key={`model-${model.name}-${modelIndex}`}
                     className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
                   >
                     <h3 className="font-semibold text-lg mb-2 text-zinc-900 dark:text-zinc-100">
                       {model.name}
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {model.fields.map((field) => (
+                      {model.fields.map((field, fieldIndex) => (
                         <div
-                          key={field.name}
+                          key={`field-${model.name}-${field.name}-${fieldIndex}`}
                           className="text-sm text-zinc-600 dark:text-zinc-400"
                         >
                           <span className="font-medium">{field.name}:</span>{" "}
@@ -246,9 +246,9 @@ export default function Home() {
                 UI Components ({state.analysis.uiComponents.length})
               </h2>
               <div className="space-y-4">
-                {state.analysis.uiComponents.map((component) => (
+                {state.analysis.uiComponents.map((component, componentIndex) => (
                   <div
-                    key={component.name}
+                    key={`component-${component.name}-${componentIndex}`}
                     className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
                   >
                     <h3 className="font-semibold text-lg mb-2 text-zinc-900 dark:text-zinc-100">
@@ -258,9 +258,9 @@ export default function Home() {
                       {component.selector}
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {component.slots.map((slot) => (
+                      {component.slots.map((slot, slotIndex) => (
                         <span
-                          key={slot.name}
+                          key={`slot-${component.name}-${slot.name}-${slotIndex}`}
                           className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
                         >
                           {slot.name} ({slot.type})
@@ -278,25 +278,29 @@ export default function Home() {
                 Mappings ({state.analysis.mappings.length})
               </h2>
               <div className="space-y-4">
-                {state.analysis.mappings.map((mapping) => (
+                {state.analysis.mappings.map((mapping, mappingIndex) => (
                   <div
-                    key={mapping.pageName}
+                    key={`mapping-${mapping.pageName}-${mappingIndex}`}
                     className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
                   >
                     <h3 className="font-semibold text-lg mb-3 text-zinc-900 dark:text-zinc-100">
                       {mapping.pageName}
                     </h3>
                     <div className="space-y-3">
-                      {mapping.componentMappings.map((cm) => (
+                      {mapping.componentMappings.map((cm, cmIndex) => {
+                        // Guard against undefined/null slotMappings
+                        const slotMappings = cm.slotMappings || {};
+                        
+                        return (
                         <div
-                          key={cm.componentName}
+                          key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`}
                           className="bg-zinc-50 dark:bg-zinc-900/50 rounded p-3"
                         >
                           <h4 className="font-medium mb-2 text-zinc-800 dark:text-zinc-200">
                             {cm.componentName}
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {Object.entries(cm.slotMappings)
+                            {Object.entries(slotMappings)
                               .filter(([_, modelPath]) => {
                                 // Filter out invalid mappings (null, undefined, or non-string objects)
                                 if (modelPath === null || modelPath === undefined) {
@@ -308,13 +312,7 @@ export default function Home() {
                                 // For objects, we'll convert them to strings, so include them
                                 return true;
                               })
-                              .map(([slot, modelPath]) => {
-                                // #region agent log
-                                if (typeof window !== 'undefined') {
-                                  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:280',message:'Rendering slot mapping',data:{slot,modelPath,modelPathType:typeof modelPath,isString:typeof modelPath === 'string',isObject:typeof modelPath === 'object' && modelPath !== null,modelPathKeys:typeof modelPath === 'object' && modelPath !== null ? Object.keys(modelPath) : null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-                                }
-                                // #endregion
-                                
+                              .map(([slot, modelPath], slotIndex) => {
                                 // Safely convert modelPath to string for rendering
                                 let displayPath: string;
                                 if (typeof modelPath === "string") {
@@ -349,7 +347,7 @@ export default function Home() {
                                 
                                 return (
                                   <div
-                                    key={slot}
+                                    key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
                                     className="text-sm text-zinc-600 dark:text-zinc-400"
                                   >
                                     <span className="font-medium">{slot}</span> →{" "}
@@ -361,7 +359,8 @@ export default function Home() {
                               })}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

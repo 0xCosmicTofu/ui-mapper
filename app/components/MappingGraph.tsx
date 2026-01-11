@@ -103,7 +103,9 @@ export function MappingGraph({
     // Create edges based on mappings
     mappings.forEach((mapping) => {
       mapping.componentMappings.forEach((cm) => {
-        Object.entries(cm.slotMappings).forEach(([slot, modelPath]) => {
+        // Guard against undefined/null slotMappings
+        const slotMappings = cm.slotMappings || {};
+        Object.entries(slotMappings).forEach(([slot, modelPath]) => {
           // Safely handle modelPath (could be string, object, or null)
           let modelName: string | null = null;
           
