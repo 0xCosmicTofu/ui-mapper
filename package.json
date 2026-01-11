@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate && npx playwright install chromium --with-deps || true"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

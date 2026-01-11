@@ -216,6 +216,21 @@ Default timeouts can be adjusted in:
 - `lib/services/scraper.ts`: Page load timeout (30s)
 - `lib/services/ai-*.ts`: AI model max tokens (4000)
 
+## 🌐 Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+**Quick Deploy to Vercel:**
+1. Push your code to GitHub
+2. Import project in [Vercel](https://vercel.com)
+3. Add environment variables
+4. Deploy!
+
+**Important:** You'll need to:
+- Switch from SQLite to PostgreSQL for production
+- Update `DATABASE_URL` to a PostgreSQL connection string
+- Run `npx prisma migrate deploy` after deployment
+
 ## 🚧 Roadmap
 
 - [ ] Direct Webflow API integration
