@@ -143,7 +143,11 @@ Return ONLY valid JSON, no markdown formatting.`;
 
     try {
       // Venice AI uses OpenAI-compatible API with vision support (if screenshot available)
-      const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+      // Build content array with proper types for OpenAI SDK
+      const messageContent: Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      > = [
         {
           type: "text",
           text: prompt,
