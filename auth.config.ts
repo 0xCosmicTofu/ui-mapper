@@ -5,9 +5,31 @@ import bcrypt from "bcryptjs";
 
 // Dynamically import Prisma to avoid Edge Runtime issues
 const getPrisma = async () => {
+  // #region agent log
+  console.log("[DEBUG] getPrisma called", {
+    location: "auth.config.ts:getPrisma",
+    timestamp: new Date().toISOString(),
+    hypothesisId: "B",
+  });
+  // #endregion
+  
   const { prisma } = await import("./lib/prisma");
   return prisma;
 };
+
+// #region agent log
+console.log("[DEBUG] Auth config loading", {
+  location: "auth.config.ts:config",
+  hasAuthSecret: !!process.env.AUTH_SECRET,
+  nextAuthUrl: process.env.NEXTAUTH_URL,
+  hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+  hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+  googleClientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
+  googleClientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
+  timestamp: new Date().toISOString(),
+  hypothesisId: "C",
+});
+// #endregion
 
 export default {
   providers: [
@@ -19,7 +41,20 @@ export default {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           }),
         ]
-      : []),
+      : (() => {
+          // #region agent log
+          console.log("[DEBUG] Google OAuth provider NOT configured", {
+            location: "auth.config.ts:providers:google",
+            hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+            hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+            clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
+            clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
+            timestamp: new Date().toISOString(),
+            hypothesisId: "B",
+          });
+          // #endregion
+          return [];
+        })()),
     // Email/Password authentication
     Credentials({
       name: "Credentials",

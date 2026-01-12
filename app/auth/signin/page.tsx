@@ -43,9 +43,37 @@ function SignInForm() {
   };
 
   const handleGoogleSignIn = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:45',message:'Google sign in initiated',data:{callbackUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     setIsLoading(true);
     setError(null);
-    await signIn("google", { callbackUrl });
+    
+    try {
+      const result = await signIn("google", { callbackUrl, redirect: false });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:52',message:'Google sign in result',data:{hasError:!!result?.error,error:result?.error,hasUrl:!!result?.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
+      if (result?.error) {
+        setError(result.error);
+        setIsLoading(false);
+      } else if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        router.push(callbackUrl);
+        router.refresh();
+      }
+    } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:65',message:'Google sign in exception',data:{error:err instanceof Error ? err.message : String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
+      setError("An error occurred. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
