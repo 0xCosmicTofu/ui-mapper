@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 import { prisma } from "./lib/prisma";
+import { getEnv } from "./lib/utils/env";
 
 // Note: We're using JWT sessions, so we don't need PrismaAdapter for middleware
 // The adapter is only needed for OAuth account linking, which happens in API routes
@@ -22,9 +23,9 @@ console.log("[DEBUG] NextAuth initialization", {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
-  secret: process.env.AUTH_SECRET,
+  secret: getEnv("AUTH_SECRET"),
   ...authConfig,
-  debug: process.env.NODE_ENV === "development",
+  debug: process.env.NODE_ENV === "development", // NODE_ENV is standard, no trim needed
   callbacks: {
     // #region agent log
     async signIn({ user, account, profile }) {

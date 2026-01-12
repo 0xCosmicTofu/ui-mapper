@@ -1,12 +1,13 @@
 import OpenAI from "openai";
 import type { ContentModel, UIComponent, PageMapping } from "../types";
+import { getEnv } from "../utils/env";
 
 export class MappingService {
   private openai: OpenAI;
   private modelId: string;
 
   constructor() {
-    const veniceKey = process.env.VENICE_API_KEY;
+    const veniceKey = getEnv("VENICE_API_KEY");
     if (!veniceKey) {
       throw new Error("VENICE_API_KEY is required");
     }
@@ -18,8 +19,7 @@ export class MappingService {
     });
 
     // Use Venice model ID or default to claude-opus-45
-    // Trim whitespace/newlines that might come from environment variables
-    this.modelId = (process.env.VENICE_MODEL_ID || "claude-opus-45").trim();
+    this.modelId = getEnv("VENICE_MODEL_ID", "claude-opus-45");
   }
 
   async createMappings(
