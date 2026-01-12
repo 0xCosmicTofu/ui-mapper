@@ -27,13 +27,48 @@ export class ComponentDetector {
     html: string,
     screenshotPath: string
   ): Promise<UIComponent[]> {
-    // Read screenshot as base64
-    const screenshotFullPath = join(process.cwd(), "public", screenshotPath);
-    const screenshotBuffer = await readFile(screenshotFullPath);
-    const screenshotBase64 = screenshotBuffer.toString("base64");
+    // #region agent log
+    console.log("[DEBUG] ComponentDetector: Starting component detection", {
+      location: "lib/services/ai-component-detector.ts:detectComponents",
+      htmlLength: html.length,
+      hasScreenshot: !!screenshotPath,
+      screenshotPath,
+      timestamp: new Date().toISOString(),
+      hypothesisId: "E",
+    });
+    // #endregion
 
-    // Use Claude Vision for component detection
-    const prompt = `**Stage 1: Component Detection**
+    let screenshotBase64: string | null = null;
+    
+    // Try to read screenshot if available
+    if (screenshotPath) {
+      try {
+        const screenshotFullPath = join(process.cwd(), "public", screenshotPath);
+        const screenshotBuffer = await readFile(screenshotFullPath);
+        screenshotBase64 = screenshotBuffer.toString("base64");
+        // #region agent log
+        console.log("[DEBUG] ComponentDetector: Screenshot loaded", {
+          location: "lib/services/ai-component-detector.ts:detectComponents:screenshot",
+          screenshotSize: screenshotBuffer.length,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "E",
+        });
+        // #endregion
+      } catch (error) {
+        // #region agent log
+        console.warn("[DEBUG] ComponentDetector: Screenshot not available, continuing without it", {
+          location: "lib/services/ai-component-detector.ts:detectComponents:screenshotError",
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+          hypothesisId: "E",
+        });
+        // #endregion
+      }
+    }
+
+    // Use Claude Vision for component detection (with or without screenshot)
+    const prompt = screenshotBase64
+      ? `**Stage 1: Component Detection**
 
 You are analyzing a webpage to identify reusable UI components. 
 
@@ -42,7 +77,17 @@ HTML Structure:
 ${html.substring(0, 50000)} // Truncate if too long
 \`\`\`
 
-Analyze the screenshot and HTML to identify 5-10 reusable components. For each component, identify:
+Analyze the screenshot and HTML to identify 5-10 reusable components. For each component, identify:`
+      : `**Stage 1: Component Detection**
+
+You are analyzing a webpage to identify reusable UI components. 
+
+HTML Structure:
+\`\`\`html
+${html.substring(0, 50000)} // Truncate if too long
+\`\`\`
+
+Analyze the HTML structure to identify 5-10 reusable components. For each component, identify:`;
 1. Component name (e.g., "HeroBanner", "StatsGrid", "SpeakerCard")
 2. CSS selector that uniquely identifies this component
 3. Slots within the component (text elements, images, links, arrays of items)
@@ -71,25 +116,42 @@ Focus on:
 Return ONLY valid JSON, no markdown formatting.`;
 
     try {
-      // Venice AI uses OpenAI-compatible API with vision support
+      // Venice AI uses OpenAI-compatible API with vision support (if screenshot available)
+      const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+        {
+          type: "text",
+          text: prompt,
+        },
+      ];
+
+      // Add screenshot if available
+      if (screenshotBase64) {
+        messageContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:image/png;base64,${screenshotBase64}`,
+          },
+        });
+      }
+
+      // #region agent log
+      console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
+        location: "lib/services/ai-component-detector.ts:detectComponents:request",
+        model: this.modelId,
+        hasScreenshot: !!screenshotBase64,
+        messageContentLength: messageContent.length,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "E",
+      });
+      // #endregion
+
       const response = await this.openai.chat.completions.create({
         model: this.modelId,
         max_tokens: 4000,
         messages: [
           {
             role: "user",
-            content: [
-              {
-                type: "text",
-                text: prompt,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/png;base64,${screenshotBase64}`,
-                },
-              },
-            ],
+            content: messageContent,
           },
         ],
         response_format: { type: "json_object" },
@@ -109,8 +171,28 @@ Return ONLY valid JSON, no markdown formatting.`;
         const parsed = JSON.parse(cleanedJson);
         // Handle both {components: [...]} and [...] formats
         const components = Array.isArray(parsed) ? parsed : (parsed.components || []);
+        
+        // #region agent log
+        console.log("[DEBUG] ComponentDetector: Successfully parsed components", {
+          location: "lib/services/ai-component-detector.ts:detectComponents:success",
+          componentCount: components.length,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "E",
+        });
+        // #endregion
+        
         return components as UIComponent[];
       } catch (parseError) {
+        // #region agent log
+        console.error("[DEBUG] ComponentDetector: Failed to parse JSON", {
+          location: "lib/services/ai-component-detector.ts:detectComponents:parseError",
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          rawResponse: jsonText.substring(0, 500),
+          timestamp: new Date().toISOString(),
+          hypothesisId: "E",
+        });
+        // #endregion
+        
         console.error("Failed to parse components JSON:", parseError);
         console.error("Raw response:", jsonText);
         throw new Error(
@@ -118,6 +200,16 @@ Return ONLY valid JSON, no markdown formatting.`;
         );
       }
     } catch (error) {
+      // #region agent log
+      console.error("[DEBUG] ComponentDetector: Component detection failed", {
+        location: "lib/services/ai-component-detector.ts:detectComponents:error",
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "E",
+      });
+      // #endregion
+      
       console.error("Error detecting components with Venice AI:", error);
       throw new Error(
         `Component detection failed. ${error instanceof Error ? error.message : String(error)}`
