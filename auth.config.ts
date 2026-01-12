@@ -34,30 +34,43 @@ console.log("[DEBUG] Auth config loading", {
 });
 // #endregion
 
+const googleProvider = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  ? Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  : null;
+
+// #region agent log
+if (googleProvider) {
+  console.log("[DEBUG] Google OAuth provider configured", {
+    location: "auth.config.ts:providers:google",
+    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+    hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
+    clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
+    nextAuthUrl: process.env.NEXTAUTH_URL,
+    expectedCallbackUrl: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google` : "not set",
+    timestamp: new Date().toISOString(),
+    hypothesisId: "B",
+  });
+} else {
+  console.log("[DEBUG] Google OAuth provider NOT configured", {
+    location: "auth.config.ts:providers:google",
+    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+    hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
+    clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
+    timestamp: new Date().toISOString(),
+    hypothesisId: "B",
+  });
+}
+// #endregion
+
 export default {
   providers: [
     // Google OAuth (optional - only enabled if credentials are provided)
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [
-          Google({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          }),
-        ]
-      : (() => {
-          // #region agent log
-          console.log("[DEBUG] Google OAuth provider NOT configured", {
-            location: "auth.config.ts:providers:google",
-            hasClientId: !!process.env.GOOGLE_CLIENT_ID,
-            hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-            clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
-            clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
-            timestamp: new Date().toISOString(),
-            hypothesisId: "B",
-          });
-          // #endregion
-          return [];
-        })()),
+    ...(googleProvider ? [googleProvider] : []),
     // Email/Password authentication
     Credentials({
       name: "Credentials",

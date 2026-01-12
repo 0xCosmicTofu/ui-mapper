@@ -13,6 +13,8 @@ console.log("[DEBUG] NextAuth initialization", {
   authSecretLength: process.env.AUTH_SECRET?.length || 0,
   nextAuthUrl: process.env.NEXTAUTH_URL,
   hasAuthConfig: !!authConfig,
+  providerCount: authConfig?.providers?.length || 0,
+  providerNames: authConfig?.providers?.map((p: any) => p.id || p.name || "unknown") || [],
   timestamp: new Date().toISOString(),
   hypothesisId: "C",
 });
@@ -22,6 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: process.env.AUTH_SECRET,
   ...authConfig,
+  debug: process.env.NODE_ENV === "development",
   callbacks: {
     // #region agent log
     async signIn({ user, account, profile }) {
