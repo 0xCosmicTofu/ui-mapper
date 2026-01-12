@@ -168,10 +168,14 @@ Return ONLY valid JSON, no markdown formatting.`;
       console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
         location: "lib/services/ai-component-detector.ts:detectComponents:request",
         model: this.modelId,
+        baseURL: this.openai.baseURL,
         hasScreenshot: !!screenshotBase64,
         messageContentLength: messageContent.length,
+        messageContentTypes: messageContent.map(m => m.type),
+        hasApiKey: !!process.env.VENICE_API_KEY,
+        apiKeyPrefix: process.env.VENICE_API_KEY?.substring(0, 10) || "none",
         timestamp: new Date().toISOString(),
-        hypothesisId: "E",
+        hypothesisId: "F",
       });
       // #endregion
 
@@ -231,18 +235,48 @@ Return ONLY valid JSON, no markdown formatting.`;
       }
     } catch (error) {
       // #region agent log
-      console.error("[DEBUG] ComponentDetector: Component detection failed", {
+      let errorDetails: any = {
         location: "lib/services/ai-component-detector.ts:detectComponents:error",
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString(),
-        hypothesisId: "E",
-      });
+        hypothesisId: "F",
+      };
+
+      // Extract more details from OpenAI SDK errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const response = (error as any).response;
+        errorDetails.responseStatus = response?.status;
+        errorDetails.responseStatusText = response?.statusText;
+        errorDetails.responseData = response?.data;
+        errorDetails.responseHeaders = response?.headers;
+      }
+
+      // Extract request details if available
+      if (error && typeof error === 'object' && 'request' in error) {
+        const request = (error as any).request;
+        errorDetails.requestUrl = request?.url;
+        errorDetails.requestMethod = request?.method;
+        errorDetails.requestHeaders = request?.headers;
+      }
+
+      // Log model and baseURL for debugging
+      errorDetails.modelId = this.modelId;
+      errorDetails.baseURL = this.openai.baseURL;
+      errorDetails.hasApiKey = !!process.env.VENICE_API_KEY;
+      errorDetails.apiKeyLength = process.env.VENICE_API_KEY?.length || 0;
+
+      console.error("[DEBUG] ComponentDetector: Component detection failed", errorDetails);
       // #endregion
       
       console.error("Error detecting components with Venice AI:", error);
+      
+      // Provide more detailed error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const statusCode = (error as any)?.response?.status;
+      const statusText = (error as any)?.response?.statusText;
+      
       throw new Error(
-        `Component detection failed. ${error instanceof Error ? error.message : String(error)}`
+        `Component detection failed. ${errorMessage}${statusCode ? ` (${statusCode} ${statusText || ''})` : ''}`
       );
     }
   }
