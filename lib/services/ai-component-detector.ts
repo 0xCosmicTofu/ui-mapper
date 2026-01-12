@@ -77,7 +77,33 @@ HTML Structure:
 ${html.substring(0, 50000)} // Truncate if too long
 \`\`\`
 
-Analyze the screenshot and HTML to identify 5-10 reusable components. For each component, identify:`
+Analyze the screenshot and HTML to identify 5-10 reusable components. For each component, identify:
+1. Component name (e.g., "HeroBanner", "StatsGrid", "SpeakerCard")
+2. CSS selector that uniquely identifies this component
+3. Slots within the component (text elements, images, links, arrays of items)
+
+Output a JSON array with this exact structure:
+[
+  {
+    "name": "HeroBanner",
+    "selector": ".hero-section",
+    "slots": [
+      {"name": "title", "selector": "h1.title", "type": "text"},
+      {"name": "subtitle", "selector": ".subtitle", "type": "text"},
+      {"name": "primary_stat", "selector": ".stat-lead", "type": "text"},
+      {"name": "cta", "selector": ".cta-btn", "type": "link"}
+    ],
+    "variants": ["full", "teaser"],
+    "description": "Main hero banner with title and CTA"
+  }
+]
+
+Focus on:
+- Components that appear multiple times or could be reused
+- Components with clear content slots
+- Components that would make sense as Webflow Symbols
+
+Return ONLY valid JSON, no markdown formatting.`
       : `**Stage 1: Component Detection**
 
 You are analyzing a webpage to identify reusable UI components. 
@@ -87,7 +113,7 @@ HTML Structure:
 ${html.substring(0, 50000)} // Truncate if too long
 \`\`\`
 
-Analyze the HTML structure to identify 5-10 reusable components. For each component, identify:`;
+Analyze the HTML structure to identify 5-10 reusable components. For each component, identify:
 1. Component name (e.g., "HeroBanner", "StatsGrid", "SpeakerCard")
 2. CSS selector that uniquely identifies this component
 3. Slots within the component (text elements, images, links, arrays of items)
