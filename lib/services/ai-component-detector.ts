@@ -44,8 +44,8 @@ export class ComponentDetector {
     // Try to read screenshot if available
     if (screenshotPath) {
       try {
-        const screenshotFullPath = join(process.cwd(), "public", screenshotPath);
-        const screenshotBuffer = await readFile(screenshotFullPath);
+    const screenshotFullPath = join(process.cwd(), "public", screenshotPath);
+    const screenshotBuffer = await readFile(screenshotFullPath);
         screenshotBase64 = screenshotBuffer.toString("base64");
         // #region agent log
         console.log("[DEBUG] ComponentDetector: Screenshot loaded", {
@@ -166,21 +166,7 @@ Return ONLY valid JSON, no markdown formatting.`;
       }
 
       // #region agent log
-      console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
-        location: "lib/services/ai-component-detector.ts:detectComponents:request",
-        model: this.modelId,
-        baseURL: this.openai.baseURL,
-        hasScreenshot: !!screenshotBase64,
-        messageContentLength: messageContent.length,
-        messageContentTypes: messageContent.map(m => m.type),
-        hasApiKey: !!getEnv("VENICE_API_KEY"),
-        apiKeyPrefix: getEnv("VENICE_API_KEY").substring(0, 10) || "none",
-        timestamp: new Date().toISOString(),
-        hypothesisId: "F",
-      });
-      // #endregion
-
-      const response = await this.openai.chat.completions.create({
+      const requestPayload = {
         model: this.modelId,
         max_tokens: 4000,
         messages: [
@@ -190,7 +176,27 @@ Return ONLY valid JSON, no markdown formatting.`;
           },
         ],
         response_format: { type: "json_object" },
+      };
+      
+      console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
+        location: "lib/services/ai-component-detector.ts:detectComponents:request",
+        model: this.modelId,
+        modelLength: this.modelId.length,
+        modelCharCodes: this.modelId.split('').map(c => c.charCodeAt(0)).slice(0, 20),
+        baseURL: this.openai.baseURL,
+        expectedEndpoint: `${this.openai.baseURL}/chat/completions`,
+        hasScreenshot: !!screenshotBase64,
+        messageContentLength: messageContent.length,
+        messageContentTypes: messageContent.map(m => m.type),
+        hasApiKey: !!getEnv("VENICE_API_KEY"),
+        apiKeyPrefix: getEnv("VENICE_API_KEY").substring(0, 10) || "none",
+        requestPayload: JSON.stringify(requestPayload).substring(0, 500),
+        timestamp: new Date().toISOString(),
+        hypothesisId: "G",
       });
+      // #endregion
+
+      const response = await this.openai.chat.completions.create(requestPayload);
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
@@ -262,9 +268,13 @@ Return ONLY valid JSON, no markdown formatting.`;
 
       // Log model and baseURL for debugging
       errorDetails.modelId = this.modelId;
+      errorDetails.modelIdLength = this.modelId.length;
+      errorDetails.modelIdCharCodes = this.modelId.split('').map(c => c.charCodeAt(0));
       errorDetails.baseURL = this.openai.baseURL;
+      errorDetails.expectedEndpoint = `${this.openai.baseURL}/chat/completions`;
       errorDetails.hasApiKey = !!getEnv("VENICE_API_KEY");
       errorDetails.apiKeyLength = getEnv("VENICE_API_KEY").length;
+      errorDetails.rawModelId = JSON.stringify(this.modelId);
 
       console.error("[DEBUG] ComponentDetector: Component detection failed", errorDetails);
       // #endregion
