@@ -6,12 +6,18 @@ import { prisma } from "./lib/prisma";
 // The adapter is only needed for OAuth account linking, which happens in API routes
 // For JWT strategy, sessions are stored in the token, not the database
 
+// Normalize NEXTAUTH_URL by trimming whitespace (fixes trailing newline issue)
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL?.trim() || process.env.NEXTAUTH_URL;
+
 // #region agent log
 console.log("[DEBUG] NextAuth initialization", {
   location: "auth.ts:NextAuth",
   hasAuthSecret: !!process.env.AUTH_SECRET,
   authSecretLength: process.env.AUTH_SECRET?.length || 0,
-  nextAuthUrl: process.env.NEXTAUTH_URL,
+  nextAuthUrl: NEXTAUTH_URL,
+  nextAuthUrlLength: NEXTAUTH_URL?.length || 0,
+  rawNextAuthUrl: process.env.NEXTAUTH_URL,
+  rawNextAuthUrlLength: process.env.NEXTAUTH_URL?.length || 0,
   hasAuthConfig: !!authConfig,
   providerCount: authConfig?.providers?.length || 0,
   providerNames: authConfig?.providers?.map((p: any) => p.id || p.name || "unknown") || [],

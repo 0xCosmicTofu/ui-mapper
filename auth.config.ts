@@ -3,6 +3,9 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 
+// Normalize NEXTAUTH_URL by trimming whitespace (fixes trailing newline issue)
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL?.trim() || process.env.NEXTAUTH_URL;
+
 // Dynamically import Prisma to avoid Edge Runtime issues
 const getPrisma = async () => {
   // #region agent log
@@ -22,7 +25,10 @@ console.log("[DEBUG] Auth config loading", {
   location: "auth.config.ts:config",
   hasAuthSecret: !!process.env.AUTH_SECRET,
   authSecretLength: process.env.AUTH_SECRET?.length || 0,
-  nextAuthUrl: process.env.NEXTAUTH_URL,
+  nextAuthUrl: NEXTAUTH_URL,
+  nextAuthUrlLength: NEXTAUTH_URL?.length || 0,
+  rawNextAuthUrl: process.env.NEXTAUTH_URL,
+  rawNextAuthUrlLength: process.env.NEXTAUTH_URL?.length || 0,
   hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
   hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
   googleClientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
@@ -49,8 +55,8 @@ if (googleProvider) {
     hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
     clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
     clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
-    nextAuthUrl: process.env.NEXTAUTH_URL,
-    expectedCallbackUrl: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google` : "not set",
+    nextAuthUrl: NEXTAUTH_URL,
+    expectedCallbackUrl: NEXTAUTH_URL ? `${NEXTAUTH_URL}/api/auth/callback/google` : "not set",
     timestamp: new Date().toISOString(),
     hypothesisId: "B",
   });

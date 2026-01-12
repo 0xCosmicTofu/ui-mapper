@@ -1,13 +1,19 @@
 import { handlers } from "../../../../auth";
 import { NextRequest } from "next/server";
 
+// Normalize NEXTAUTH_URL by trimming whitespace (fixes trailing newline issue)
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL?.trim() || process.env.NEXTAUTH_URL;
+
 // #region agent log
 console.log("[DEBUG] NextAuth route handler loaded", {
   location: "app/api/auth/[...nextauth]/route.ts",
   hasHandlers: !!handlers,
   hasGET: typeof handlers?.GET === "function",
   hasPOST: typeof handlers?.POST === "function",
-  nextAuthUrl: process.env.NEXTAUTH_URL,
+  nextAuthUrl: NEXTAUTH_URL,
+  nextAuthUrlLength: NEXTAUTH_URL?.length || 0,
+  rawNextAuthUrl: process.env.NEXTAUTH_URL,
+  rawNextAuthUrlLength: process.env.NEXTAUTH_URL?.length || 0,
   authSecret: !!process.env.AUTH_SECRET,
   timestamp: new Date().toISOString(),
   hypothesisId: "A",
