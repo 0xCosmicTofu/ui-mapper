@@ -37,19 +37,6 @@ export class WebflowExporter {
         // Map slots to collection fields
         Object.entries(componentMapping.slotMappings).forEach(
           ([slotName, modelPath]) => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'webflow-exporter.ts:38',message:'Processing slot mapping',data:{slotName,modelPath,modelPathType:typeof modelPath,isString:typeof modelPath === 'string'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-            // #endregion
-            
-            // Validate modelPath is a string
-            if (typeof modelPath !== "string") {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'webflow-exporter.ts:43',message:'Invalid modelPath type, skipping',data:{slotName,modelPath,modelPathType:typeof modelPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-              // #endregion
-              console.warn(`Skipping slot "${slotName}": modelPath is not a string (got ${typeof modelPath}):`, modelPath);
-              return; // Skip this mapping
-            }
-            
             // Extract model and field from path (e.g., "Event.title" -> "Event", "title")
             const [modelName, ...fieldPath] = modelPath.split(".");
             const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, ""); // Remove array indices
@@ -122,15 +109,6 @@ export class WebflowExporter {
     const collectionCounts: Record<string, number> = {};
     
     Object.values(componentMapping.slotMappings).forEach((path) => {
-      // Validate path is a string
-      if (typeof path !== "string") {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'webflow-exporter.ts:115',message:'Invalid path type in findPrimaryCollection',data:{path,pathType:typeof path},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-        // #endregion
-        console.warn(`Skipping invalid path in findPrimaryCollection:`, path);
-        return; // Skip this path
-      }
-      
       const [modelName] = path.split(".");
       const collection = collections.find((c) => c.name === modelName);
       if (collection) {

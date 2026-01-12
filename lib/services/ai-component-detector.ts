@@ -1,37 +1,30 @@
+import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { UIComponent } from "../types";
 
-/**
- * Venice AI Model Configuration
- * 
- * Venice supports OpenAI-compatible API. For vision tasks (component detection),
- * we use Claude Opus 4.5 which supports image inputs.
- * 
- * Model ID format: claude-opus-45 (no dot, no "4.5")
- * To override, set VENICE_MODEL_ID in .env file
- * Check Venice docs for available models: https://docs.venice.ai
- */
-const DEFAULT_VENICE_VISION_MODEL = "claude-opus-45";
-
 export class ComponentDetector {
-  private openai: OpenAI;
-  private modelId: string;
+  private anthropic: Anthropic;
+  private openai: OpenAI | null = null;
 
   constructor() {
-    const veniceKey = process.env.VENICE_API_KEY;
-    if (!veniceKey) {
-      throw new Error("VENICE_API_KEY is required");
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      throw new Error("ANTHROPIC_API_KEY is required");
     }
 
-    this.openai = new OpenAI({
-      apiKey: veniceKey,
-      baseURL: "https://api.venice.ai/api/v1",
+    this.anthropic = new Anthropic({
+      apiKey: anthropicKey,
     });
 
-    // Model ID is defined here - can be overridden via .env
-    this.modelId = process.env.VENICE_MODEL_ID || DEFAULT_VENICE_VISION_MODEL;
+    // Only initialize OpenAI if key is provided (optional fallback)
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      this.openai = new OpenAI({
+        apiKey: openaiKey,
+      });
+    }
   }
 
   async detectComponents(
@@ -81,48 +74,38 @@ Focus on:
 
 Return ONLY valid JSON, no markdown formatting.`;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-component-detector.ts:72',message:'Starting component detection',data:{modelId:this.modelId,screenshotPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
-    
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-component-detector.ts:76',message:'Calling Venice API',data:{modelId:this.modelId,baseURL:this.openai.baseURL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      
-      const response = await this.openai.chat.completions.create({
-        model: this.modelId, // Model ID defined in constructor (default: claude-opus-45)
+      const response = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
         max_tokens: 4000,
         messages: [
           {
             role: "user",
             content: [
               {
-                type: "text",
-                text: prompt,
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: screenshotBase64,
+                },
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/png;base64,${screenshotBase64}`,
-                },
+                type: "text",
+                text: prompt,
               },
             ],
           },
         ],
       });
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-component-detector.ts:100',message:'Venice API response received',data:{modelId:this.modelId,hasContent:!!response.choices[0]?.message?.content},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error("No response from Venice API");
+      const content = response.content[0];
+      if (content.type !== "text") {
+        throw new Error("Unexpected response type from Claude");
       }
 
       // Parse JSON response
-      const jsonText = content.trim();
+      const jsonText = content.text.trim();
       // Remove markdown code blocks if present
       const cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       
@@ -137,12 +120,71 @@ Return ONLY valid JSON, no markdown formatting.`;
         );
       }
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-component-detector.ts:120',message:'Component detection error',data:{modelId:this.modelId,error:error instanceof Error ? error.message : String(error),errorName:error instanceof Error ? error.name : 'Unknown',errorStack:error instanceof Error ? error.stack : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      console.error("Error detecting components with Venice API:", error);
+      console.error("Error detecting components with Claude:", error);
+      
+      // Only try GPT-4V fallback if OpenAI is configured
+      if (this.openai) {
+        console.log("Falling back to GPT-4V for component detection...");
+        try {
+          return await this.detectComponentsWithGPT4V(html, screenshotBase64);
+        } catch (fallbackError) {
+          console.error("GPT-4V fallback also failed:", fallbackError);
+          throw new Error(
+            `Component detection failed with both Claude and GPT-4V. Claude error: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      }
+      
+      // Re-throw if no fallback available
       throw new Error(
-        `Component detection failed. ${error instanceof Error ? error.message : String(error)}`
+        `Component detection failed with Claude. ${error instanceof Error ? error.message : String(error)}. ${!this.openai ? "OpenAI API key not configured, so no fallback available." : ""}`
+      );
+    }
+  }
+
+  private async detectComponentsWithGPT4V(
+    html: string,
+    screenshotBase64: string
+  ): Promise<UIComponent[]> {
+    if (!this.openai) {
+      throw new Error("OpenAI API key not configured. Cannot use GPT-4V fallback.");
+    }
+
+    const response = await this.openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Analyze this webpage and identify reusable UI components. HTML: ${html.substring(0, 10000)}. Return JSON array of components with name, selector, and slots.`,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/png;base64,${screenshotBase64}`,
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from GPT-4V");
+    }
+
+    try {
+      const parsed = JSON.parse(content);
+      return parsed.components || [];
+    } catch (parseError) {
+      console.error("Failed to parse GPT-4V response JSON:", parseError);
+      console.error("Raw response:", content);
+      throw new Error(
+        `Failed to parse components from GPT-4V response. ${parseError instanceof Error ? parseError.message : String(parseError)}`
       );
     }
   }

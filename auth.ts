@@ -6,6 +6,18 @@ import { prisma } from "./lib/prisma";
 // The adapter is only needed for OAuth account linking, which happens in API routes
 // For JWT strategy, sessions are stored in the token, not the database
 
+// #region agent log
+console.log("[DEBUG] NextAuth initialization", {
+  location: "auth.ts:NextAuth",
+  hasAuthSecret: !!process.env.AUTH_SECRET,
+  authSecretLength: process.env.AUTH_SECRET?.length || 0,
+  nextAuthUrl: process.env.NEXTAUTH_URL,
+  hasAuthConfig: !!authConfig,
+  timestamp: new Date().toISOString(),
+  hypothesisId: "C",
+});
+// #endregion
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: process.env.AUTH_SECRET,

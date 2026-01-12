@@ -1,33 +1,18 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import type { ContentModel, UIComponent } from "../types";
 
-/**
- * Venice AI Model Configuration
- * 
- * For text-only tasks (content modeling), we use Claude Opus 4.5.
- * 
- * Model ID format: claude-opus-45 (no dot, no "4.5")
- * To override, set VENICE_MODEL_ID in .env file
- */
-const DEFAULT_VENICE_TEXT_MODEL = "claude-opus-45";
-
 export class ContentModeler {
-  private openai: OpenAI;
-  private modelId: string;
+  private anthropic: Anthropic;
 
   constructor() {
-    const veniceKey = process.env.VENICE_API_KEY;
-    if (!veniceKey) {
-      throw new Error("VENICE_API_KEY is required");
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      throw new Error("ANTHROPIC_API_KEY is required");
     }
 
-    this.openai = new OpenAI({
-      apiKey: veniceKey,
-      baseURL: "https://api.venice.ai/api/v1",
+    this.anthropic = new Anthropic({
+      apiKey: anthropicKey,
     });
-
-    // Model ID is defined here - can be overridden via .env
-    this.modelId = process.env.VENICE_MODEL_ID || DEFAULT_VENICE_TEXT_MODEL;
   }
 
   async extractContentModels(
@@ -78,8 +63,8 @@ Focus on:
 
 Return ONLY valid JSON, no markdown formatting.`;
 
-    const response = await this.openai.chat.completions.create({
-      model: this.modelId, // Model ID defined in constructor (default: claude-opus-45)
+    const response = await this.anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
       max_tokens: 4000,
       messages: [
         {
@@ -89,12 +74,12 @@ Return ONLY valid JSON, no markdown formatting.`;
       ],
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("No response from Venice API");
+    const content = response.content[0];
+    if (content.type !== "text") {
+      throw new Error("Unexpected response type from Claude");
     }
 
-    const jsonText = content.trim();
+    const jsonText = content.text.trim();
     const cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     
     try {

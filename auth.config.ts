@@ -21,11 +21,14 @@ const getPrisma = async () => {
 console.log("[DEBUG] Auth config loading", {
   location: "auth.config.ts:config",
   hasAuthSecret: !!process.env.AUTH_SECRET,
+  authSecretLength: process.env.AUTH_SECRET?.length || 0,
   nextAuthUrl: process.env.NEXTAUTH_URL,
   hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
   hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
   googleClientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
   googleClientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
+  googleClientIdPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 10) || "none",
+  nodeEnv: process.env.NODE_ENV,
   timestamp: new Date().toISOString(),
   hypothesisId: "C",
 });

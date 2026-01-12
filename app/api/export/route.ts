@@ -1,31 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { WebflowExport, AnalysisResult } from "@/lib/types";
+import type { WebflowExport } from "@/lib/types";
 
 const ExportRequestSchema = z.object({
-  webflowExport: z.any().optional(), // WebflowExport type
-  analysis: z.any().optional(), // AnalysisResult type
-  format: z.enum(["json", "csv", "generic"]).default("json"),
-  exportType: z.enum(["webflow", "generic"]).default("webflow"),
+  webflowExport: z.any(), // WebflowExport type
+  format: z.enum(["json", "csv"]).default("json"),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { webflowExport, analysis, format, exportType } = ExportRequestSchema.parse(body);
+    const { webflowExport, format } = ExportRequestSchema.parse(body);
 
-    // Generic JSON export (platform-agnostic)
-    if (exportType === "generic" && analysis) {
-      return NextResponse.json(analysis, {
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Disposition": 'attachment; filename="analysis-export.json"',
-        },
-      });
-    }
-
-    // Webflow JSON export
-    if (format === "json" && webflowExport) {
+    if (format === "json") {
       return NextResponse.json(webflowExport, {
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Invalid format or missing data" },
+      { error: "Invalid format or missing CSV data" },
       { status: 400 }
     );
   } catch (error) {

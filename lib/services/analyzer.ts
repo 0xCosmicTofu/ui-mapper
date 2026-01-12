@@ -26,15 +26,8 @@ export class SiteAnalyzer {
   }> {
     try {
       // Step 1: Scrape the site
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analyzer.ts:28',message:'Step 1: Starting scrape',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       console.log("Step 1: Scraping site...");
-      const scrapeStartTime = Date.now();
       const scrapeResult = await this.scraper.scrape(url);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analyzer.ts:32',message:'Step 1: Scrape completed',data:{url,elapsed:Date.now()-scrapeStartTime,htmlLength:scrapeResult.html.length},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
 
       // Step 2: Detect components
       console.log("Step 2: Detecting components...");
