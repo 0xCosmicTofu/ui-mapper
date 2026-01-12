@@ -2,13 +2,14 @@ import OpenAI from "openai";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { UIComponent } from "../types";
+import { getEnv } from "../utils/env";
 
 export class ComponentDetector {
   private openai: OpenAI;
   private modelId: string;
 
   constructor() {
-    const veniceKey = process.env.VENICE_API_KEY;
+    const veniceKey = getEnv("VENICE_API_KEY");
     if (!veniceKey) {
       throw new Error("VENICE_API_KEY is required");
     }
@@ -20,8 +21,7 @@ export class ComponentDetector {
     });
 
     // Use Venice model ID or default to claude-opus-45
-    // Trim whitespace/newlines that might come from environment variables
-    this.modelId = (process.env.VENICE_MODEL_ID || "claude-opus-45").trim();
+    this.modelId = getEnv("VENICE_MODEL_ID", "claude-opus-45");
   }
 
   async detectComponents(
@@ -173,8 +173,8 @@ Return ONLY valid JSON, no markdown formatting.`;
         hasScreenshot: !!screenshotBase64,
         messageContentLength: messageContent.length,
         messageContentTypes: messageContent.map(m => m.type),
-        hasApiKey: !!process.env.VENICE_API_KEY,
-        apiKeyPrefix: process.env.VENICE_API_KEY?.substring(0, 10) || "none",
+        hasApiKey: !!getEnv("VENICE_API_KEY"),
+        apiKeyPrefix: getEnv("VENICE_API_KEY").substring(0, 10) || "none",
         timestamp: new Date().toISOString(),
         hypothesisId: "F",
       });
@@ -263,8 +263,8 @@ Return ONLY valid JSON, no markdown formatting.`;
       // Log model and baseURL for debugging
       errorDetails.modelId = this.modelId;
       errorDetails.baseURL = this.openai.baseURL;
-      errorDetails.hasApiKey = !!process.env.VENICE_API_KEY;
-      errorDetails.apiKeyLength = process.env.VENICE_API_KEY?.length || 0;
+      errorDetails.hasApiKey = !!getEnv("VENICE_API_KEY");
+      errorDetails.apiKeyLength = getEnv("VENICE_API_KEY").length;
 
       console.error("[DEBUG] ComponentDetector: Component detection failed", errorDetails);
       // #endregion
