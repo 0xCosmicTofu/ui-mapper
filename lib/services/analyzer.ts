@@ -24,10 +24,41 @@ export class SiteAnalyzer {
     analysis: AnalysisResult;
     webflowExport: WebflowExport;
   }> {
+    // #region agent log
+    console.log("[DEBUG] SiteAnalyzer: Starting analysis", {
+      location: "lib/services/analyzer.ts:analyze",
+      url,
+      timestamp: new Date().toISOString(),
+      hypothesisId: "E",
+    });
+    // #endregion
+
     try {
       // Step 1: Scrape the site
       console.log("Step 1: Scraping site...");
+      // #region agent log
+      console.log("[DEBUG] SiteAnalyzer: Calling scraper", {
+        location: "lib/services/analyzer.ts:analyze:scrape",
+        url,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "E",
+      });
+      // #endregion
+      
       const scrapeResult = await this.scraper.scrape(url);
+      
+      // #region agent log
+      console.log("[DEBUG] SiteAnalyzer: Scrape completed", {
+        location: "lib/services/analyzer.ts:analyze:scrapeSuccess",
+        url,
+        htmlLength: scrapeResult.html.length,
+        hasScreenshot: !!scrapeResult.screenshotPath,
+        screenshotPath: scrapeResult.screenshotPath,
+        title: scrapeResult.title,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "E",
+      });
+      // #endregion
 
       // Step 2: Detect components
       console.log("Step 2: Detecting components...");
