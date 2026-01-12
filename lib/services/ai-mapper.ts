@@ -1,18 +1,24 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import type { ContentModel, UIComponent, PageMapping } from "../types";
 
 export class MappingService {
-  private anthropic: Anthropic;
+  private openai: OpenAI;
+  private modelId: string;
 
   constructor() {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) {
-      throw new Error("ANTHROPIC_API_KEY is required");
+    const veniceKey = process.env.VENICE_API_KEY;
+    if (!veniceKey) {
+      throw new Error("VENICE_API_KEY is required");
     }
 
-    this.anthropic = new Anthropic({
-      apiKey: anthropicKey,
+    // Venice AI provides OpenAI-compatible API
+    this.openai = new OpenAI({
+      apiKey: veniceKey,
+      baseURL: "https://api.venice.ai/v1",
     });
+
+    // Use Venice model ID or default to claude-opus-45
+    this.modelId = process.env.VENICE_MODEL_ID || "claude-opus-45";
   }
 
   async createMappings(
@@ -68,8 +74,8 @@ Focus on:
 
 Return ONLY valid JSON, no markdown formatting.`;
 
-    const response = await this.anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+    const response = await this.openai.chat.completions.create({
+      model: this.modelId,
       max_tokens: 4000,
       messages: [
         {
@@ -77,19 +83,22 @@ Return ONLY valid JSON, no markdown formatting.`;
           content: prompt,
         },
       ],
+      response_format: { type: "json_object" },
     });
 
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type from Claude");
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from Venice AI");
     }
 
-    const jsonText = content.text.trim();
+    const jsonText = content.trim();
     const cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     
     try {
-      const mappings = JSON.parse(cleanedJson) as PageMapping[];
-      return mappings;
+      const parsed = JSON.parse(cleanedJson);
+      // Handle both {mappings: [...]} and [...] formats
+      const mappings = Array.isArray(parsed) ? parsed : (parsed.mappings || []);
+      return mappings as PageMapping[];
     } catch (parseError) {
       console.error("Failed to parse mappings JSON:", parseError);
       console.error("Raw response:", jsonText);

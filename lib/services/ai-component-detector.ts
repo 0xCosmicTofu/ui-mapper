@@ -1,30 +1,26 @@
-import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { UIComponent } from "../types";
 
 export class ComponentDetector {
-  private anthropic: Anthropic;
-  private openai: OpenAI | null = null;
+  private openai: OpenAI;
+  private modelId: string;
 
   constructor() {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) {
-      throw new Error("ANTHROPIC_API_KEY is required");
+    const veniceKey = process.env.VENICE_API_KEY;
+    if (!veniceKey) {
+      throw new Error("VENICE_API_KEY is required");
     }
 
-    this.anthropic = new Anthropic({
-      apiKey: anthropicKey,
+    // Venice AI provides OpenAI-compatible API
+    this.openai = new OpenAI({
+      apiKey: veniceKey,
+      baseURL: "https://api.venice.ai/v1",
     });
 
-    // Only initialize OpenAI if key is provided (optional fallback)
-    const openaiKey = process.env.OPENAI_API_KEY;
-    if (openaiKey) {
-      this.openai = new OpenAI({
-        apiKey: openaiKey,
-      });
-    }
+    // Use Venice model ID or default to claude-opus-45
+    this.modelId = process.env.VENICE_MODEL_ID || "claude-opus-45";
   }
 
   async detectComponents(
@@ -75,43 +71,45 @@ Focus on:
 Return ONLY valid JSON, no markdown formatting.`;
 
     try {
-      const response = await this.anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
+      // Venice AI uses OpenAI-compatible API with vision support
+      const response = await this.openai.chat.completions.create({
+        model: this.modelId,
         max_tokens: 4000,
         messages: [
           {
             role: "user",
             content: [
               {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/png",
-                  data: screenshotBase64,
-                },
-              },
-              {
                 type: "text",
                 text: prompt,
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/png;base64,${screenshotBase64}`,
+                },
               },
             ],
           },
         ],
+        response_format: { type: "json_object" },
       });
 
-      const content = response.content[0];
-      if (content.type !== "text") {
-        throw new Error("Unexpected response type from Claude");
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from Venice AI");
       }
 
       // Parse JSON response
-      const jsonText = content.text.trim();
+      const jsonText = content.trim();
       // Remove markdown code blocks if present
       const cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       
       try {
-        const components = JSON.parse(cleanedJson) as UIComponent[];
-        return components;
+        const parsed = JSON.parse(cleanedJson);
+        // Handle both {components: [...]} and [...] formats
+        const components = Array.isArray(parsed) ? parsed : (parsed.components || []);
+        return components as UIComponent[];
       } catch (parseError) {
         console.error("Failed to parse components JSON:", parseError);
         console.error("Raw response:", jsonText);
@@ -120,72 +118,11 @@ Return ONLY valid JSON, no markdown formatting.`;
         );
       }
     } catch (error) {
-      console.error("Error detecting components with Claude:", error);
-      
-      // Only try GPT-4V fallback if OpenAI is configured
-      if (this.openai) {
-        console.log("Falling back to GPT-4V for component detection...");
-        try {
-          return await this.detectComponentsWithGPT4V(html, screenshotBase64);
-        } catch (fallbackError) {
-          console.error("GPT-4V fallback also failed:", fallbackError);
-          throw new Error(
-            `Component detection failed with both Claude and GPT-4V. Claude error: ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
-      }
-      
-      // Re-throw if no fallback available
+      console.error("Error detecting components with Venice AI:", error);
       throw new Error(
-        `Component detection failed with Claude. ${error instanceof Error ? error.message : String(error)}. ${!this.openai ? "OpenAI API key not configured, so no fallback available." : ""}`
+        `Component detection failed. ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
 
-  private async detectComponentsWithGPT4V(
-    html: string,
-    screenshotBase64: string
-  ): Promise<UIComponent[]> {
-    if (!this.openai) {
-      throw new Error("OpenAI API key not configured. Cannot use GPT-4V fallback.");
-    }
-
-    const response = await this.openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Analyze this webpage and identify reusable UI components. HTML: ${html.substring(0, 10000)}. Return JSON array of components with name, selector, and slots.`,
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/png;base64,${screenshotBase64}`,
-              },
-            },
-          ],
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("No response from GPT-4V");
-    }
-
-    try {
-      const parsed = JSON.parse(content);
-      return parsed.components || [];
-    } catch (parseError) {
-      console.error("Failed to parse GPT-4V response JSON:", parseError);
-      console.error("Raw response:", content);
-      throw new Error(
-        `Failed to parse components from GPT-4V response. ${parseError instanceof Error ? parseError.message : String(parseError)}`
-      );
-    }
-  }
 }
