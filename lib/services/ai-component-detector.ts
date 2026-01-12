@@ -20,7 +20,8 @@ export class ComponentDetector {
     });
 
     // Use Venice model ID or default to claude-opus-45
-    this.modelId = process.env.VENICE_MODEL_ID || "claude-opus-45";
+    // Trim whitespace/newlines that might come from environment variables
+    this.modelId = (process.env.VENICE_MODEL_ID || "claude-opus-45").trim();
   }
 
   async detectComponents(
