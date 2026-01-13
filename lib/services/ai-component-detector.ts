@@ -356,18 +356,20 @@ Return ONLY valid JSON, no markdown formatting.`;
             });
             
             // #region agent log
+            const responseData = modelsTestResponse.data as any;
+            const modelsList = responseData?.data || [];
             console.log("[DEBUG] ComponentDetector: Models endpoint test response", {
               location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsTestResponse",
               status: modelsTestResponse.status,
-              hasData: !!modelsTestResponse.data,
-              dataKeys: modelsTestResponse.data ? Object.keys(modelsTestResponse.data) : [],
-              availableModels: modelsTestResponse.data?.data?.map((m: any) => m.id) || [],
+              hasData: !!responseData,
+              dataKeys: responseData ? Object.keys(responseData) : [],
+              availableModels: Array.isArray(modelsList) ? modelsList.map((m: any) => m.id) : [],
               responseHeaders: {
                 'cf-ray': modelsTestResponse.headers['cf-ray'],
                 'x-ratelimit-remaining': modelsTestResponse.headers['x-ratelimit-remaining'],
                 'x-venice-balance-usd': modelsTestResponse.headers['x-venice-balance-usd'],
                 'x-venice-balance-diem': modelsTestResponse.headers['x-venice-balance-diem'],
-                },
+              },
               timestamp: new Date().toISOString(),
               hypothesisId: "U",
             });
@@ -378,7 +380,7 @@ Return ONLY valid JSON, no markdown formatting.`;
               console.warn("[WARN] ComponentDetector: API key works for models endpoint but fails for chat/completions", {
                 location: "lib/services/ai-component-detector.ts:detectComponents:401ModelOrSubscriptionIssue",
                 requestedModel: this.modelId,
-                availableModels: modelsTestResponse.data?.data?.map((m: any) => m.id) || [],
+                availableModels: Array.isArray(modelsList) ? modelsList.map((m: any) => m.id) : [],
                 balanceUsd: modelsTestResponse.headers['x-venice-balance-usd'],
                 balanceDiem: modelsTestResponse.headers['x-venice-balance-diem'],
                 timestamp: new Date().toISOString(),
@@ -533,11 +535,12 @@ Return ONLY valid JSON, no markdown formatting.`;
               // #endregion
               
               if (httpResponse.status === 200 && httpResponse.data) {
+                const responseData = httpResponse.data as any;
                 response = {
                   choices: [
                     {
                       message: {
-                        content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                        content: responseData?.choices?.[0]?.message?.content || JSON.stringify(responseData),
                       },
                     },
                   ],
@@ -693,11 +696,12 @@ Return ONLY valid JSON, no markdown formatting.`;
                 // #endregion
                 
                 // Convert axios response to OpenAI SDK format
+                const responseData = httpResponse.data as any;
                 response = {
                   choices: [
                     {
                       message: {
-                        content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                        content: responseData?.choices?.[0]?.message?.content || JSON.stringify(responseData),
                       },
                     },
                   ],
@@ -772,11 +776,12 @@ Return ONLY valid JSON, no markdown formatting.`;
               // #endregion
               
               if (httpResponse.status === 200 && httpResponse.data) {
+                const responseData = httpResponse.data as any;
                 response = {
                   choices: [
                     {
                       message: {
-                        content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                        content: responseData?.choices?.[0]?.message?.content || JSON.stringify(responseData),
                       },
                     },
                   ],

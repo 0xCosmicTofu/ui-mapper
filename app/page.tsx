@@ -3,6 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import type { AnalysisResult, WebflowExport } from "@/lib/types";
 import { MappingGraph } from "./components/MappingGraph";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, AlertCircle, Download, FileJson, FileSpreadsheet } from "lucide-react";
 
 type AnalysisState = {
   status: "idle" | "analyzing" | "success" | "error";
@@ -89,10 +96,10 @@ export default function Home() {
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
-            }
+      }
 
-            setState({
-              status: "success",
+      setState({
+        status: "success",
               progress: 100,
               stage: "complete",
               message: "Analysis complete!",
@@ -171,306 +178,332 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-16 max-w-6xl">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Webflow UI Mapper
-          </h1>
-          <p className="text-xl text-zinc-600 dark:text-zinc-400">
-            Transform any website into Webflow Collections, Symbols, and Bindings
-          </p>
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Webflow UI Mapper
+            </h1>
+            <p className="text-xl text-zinc-600 dark:text-zinc-400">
+              Transform any website into Webflow Collections, Symbols, and Bindings
+            </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8 mb-8">
+        <Card className="mb-8">
+          <CardContent className="pt-6">
           <div className="flex gap-4">
-            <input
+              <Input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://token2049.com/dubai"
-              className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1"
               disabled={state.status === "analyzing"}
             />
-            <button
+              <Button
               onClick={handleAnalyze}
               disabled={state.status === "analyzing"}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {state.status === "analyzing" ? "Analyzing..." : "Analyze"}
-            </button>
+                size="lg"
+              >
+                {state.status === "analyzing" ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Analyze"
+                )}
+              </Button>
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {state.status === "analyzing" && (
-          <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8 mb-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <div className="flex-1">
-                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    {state.message || "Analyzing website..."}
-                  </p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 capitalize">
-                    {state.stage || "processing"}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {state.progress || 0}%
-                  </p>
-                </div>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-3">
-                <div
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${state.progress || 0}%` }}
-                />
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+            <div className="flex items-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="flex-1">
+                    <p className="font-semibold">
+                      {state.message || "Analyzing website..."}
+                    </p>
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {state.stage || "processing"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-primary">
+                      {state.progress || 0}%
+                </p>
               </div>
             </div>
+                
+                <Progress value={state.progress || 0} className="h-2" />
           </div>
+            </CardContent>
+          </Card>
         )}
 
         {state.status === "error" && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 mb-8">
-            <h3 className="text-red-800 dark:text-red-400 font-semibold mb-2">
-              Error
-            </h3>
-            <p className="text-red-600 dark:text-red-300">{state.error}</p>
-          </div>
+          <Alert variant="destructive" className="mb-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
         )}
 
         {state.status === "success" && state.analysis && (
           <div className="space-y-8">
             {/* Export Actions */}
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
-              <div className="mb-4">
-                <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-                  Export Options
-                </h2>
-              </div>
-              <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Export Options</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                  <h3 className="text-sm font-semibold mb-2">
                     Generic Export (Platform-Agnostic)
                   </h3>
-                  <button
+                  <Button
                     onClick={() => handleExport("generic")}
-                    className="w-full px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                    className="w-full"
+                    variant="secondary"
                   >
+                    <FileJson className="mr-2 h-4 w-4" />
                     Export Generic JSON
-                  </button>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Platform-agnostic format with models, components, and mappings
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                  <h3 className="text-sm font-semibold mb-2">
                     Webflow Export
                   </h3>
                   <div className="flex gap-3">
-                    <button
+                    <Button
                       onClick={() => handleExport("json")}
-                      className="flex-1 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                      className="flex-1"
                     >
-                      Export Webflow JSON
-                    </button>
-                    <button
+                      <FileJson className="mr-2 h-4 w-4" />
+                      Export JSON
+                    </Button>
+                    <Button
                       onClick={() => handleExport("csv")}
-                      className="flex-1 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                      className="flex-1"
+                      variant="secondary"
                     >
-                      Export Webflow CSV
-                    </button>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export CSV
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Visual Graph */}
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
-              <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
-                Mapping Visualization
-              </h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                Interactive graph showing relationships between content models and UI components
-              </p>
-              <MappingGraph
-                models={state.analysis.contentModels}
-                components={state.analysis.uiComponents}
-                mappings={state.analysis.mappings}
-              />
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Mapping Visualization</CardTitle>
+                <CardDescription>
+                  Interactive graph showing relationships between content models and UI components
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MappingGraph
+                  models={state.analysis.contentModels}
+                  components={state.analysis.uiComponents}
+                  mappings={state.analysis.mappings}
+                />
+              </CardContent>
+            </Card>
 
             {/* Content Models */}
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
-              <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
-                Content Models ({state.analysis.contentModels.length})
-              </h2>
-              <div className="space-y-4">
-                {state.analysis.contentModels.map((model, modelIndex) => (
-                  <div
-                    key={`model-${model.name}-${modelIndex}`}
-                    className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
-                  >
-                    <h3 className="font-semibold text-lg mb-2 text-zinc-900 dark:text-zinc-100">
-                      {model.name}
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {model.fields.map((field, fieldIndex) => (
-                        <div
-                          key={`field-${model.name}-${field.name}-${fieldIndex}`}
-                          className="text-sm text-zinc-600 dark:text-zinc-400"
-                        >
-                          <span className="font-medium">{field.name}:</span>{" "}
-                          <span className="text-blue-600 dark:text-blue-400">
-                            {field.type}
-                          </span>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Content Models
+                  <Badge variant="secondary" className="ml-2">
+                    {state.analysis.contentModels.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {state.analysis.contentModels.map((model, modelIndex) => (
+                    <Card key={`model-${model.name}-${modelIndex}`} className="border-2">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{model.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {model.fields.map((field, fieldIndex) => (
+                            <div
+                              key={`field-${model.name}-${field.name}-${fieldIndex}`}
+                              className="text-sm"
+                            >
+                              <span className="font-medium">{field.name}:</span>{" "}
+                              <Badge variant="outline">{field.type}</Badge>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* UI Components */}
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
-              <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
-                UI Components ({state.analysis.uiComponents.length})
-              </h2>
-              <div className="space-y-4">
-                {state.analysis.uiComponents.map((component, componentIndex) => (
-                  <div
-                    key={`component-${component.name}-${componentIndex}`}
-                    className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
-                  >
-                    <h3 className="font-semibold text-lg mb-2 text-zinc-900 dark:text-zinc-100">
-                      {component.name}
-                    </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-500 mb-2 font-mono">
-                      {component.selector}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {component.slots.map((slot, slotIndex) => (
-                        <span
-                          key={`slot-${component.name}-${slot.name}-${slotIndex}`}
-                          className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
-                        >
-                          {slot.name} ({slot.type})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  UI Components
+                  <Badge variant="secondary" className="ml-2">
+                    {state.analysis.uiComponents.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {state.analysis.uiComponents.map((component, componentIndex) => (
+                    <Card key={`component-${component.name}-${componentIndex}`} className="border-2">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{component.name}</CardTitle>
+                        <CardDescription className="font-mono text-xs">
+                          {component.selector}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {component.slots.map((slot, slotIndex) => (
+                            <Badge
+                              key={`slot-${component.name}-${slot.name}-${slotIndex}`}
+                              variant="outline"
+                            >
+                              {slot.name} ({slot.type})
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Mappings */}
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
-              <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
-                Mappings ({state.analysis.mappings.length})
-              </h2>
-              <div className="space-y-4">
-                {state.analysis.mappings.map((mapping, mappingIndex) => (
-                  <div
-                    key={`mapping-${mapping.pageName}-${mappingIndex}`}
-                    className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
-                  >
-                    <h3 className="font-semibold text-lg mb-3 text-zinc-900 dark:text-zinc-100">
-                      {mapping.pageName}
-                    </h3>
-                    <div className="space-y-3">
-                      {mapping.componentMappings.map((cm, cmIndex) => {
-                        // Guard against undefined/null slotMappings
-                        const slotMappings = cm.slotMappings || {};
-                        
-                        return (
-                        <div
-                          key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`}
-                          className="bg-zinc-50 dark:bg-zinc-900/50 rounded p-3"
-                        >
-                          <h4 className="font-medium mb-2 text-zinc-800 dark:text-zinc-200">
-                            {cm.componentName}
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {Object.entries(slotMappings)
-                              .filter(([_, modelPath]) => {
-                                // Filter out invalid mappings (null, undefined, or non-string objects)
-                                if (modelPath === null || modelPath === undefined) {
-                                  return false;
-                                }
-                                if (typeof modelPath === "string") {
-                                  return true;
-                                }
-                                // For objects, we'll convert them to strings, so include them
-                                return true;
-                              })
-                              .map(([slot, modelPath], slotIndex) => {
-                                // Safely convert modelPath to string for rendering
-                                let displayPath: string;
-                                if (typeof modelPath === "string") {
-                                  displayPath = modelPath;
-                                } else if (modelPath === null || modelPath === undefined) {
-                                  displayPath = "(unmapped)";
-                                } else if (typeof modelPath === "object") {
-                                  // If it's an object, try to extract a meaningful value
-                                  const obj = modelPath as Record<string, unknown>;
-                                  if ("label" in obj && typeof obj.label === "string") {
-                                    displayPath = obj.label;
-                                  } else if ("url" in obj && typeof obj.url === "string") {
-                                    displayPath = obj.url;
-                                  } else if ("path" in obj && typeof obj.path === "string") {
-                                    displayPath = obj.path;
-                                  } else {
-                                    // Fallback: stringify the object (but make it readable)
-                                    try {
-                                      displayPath = JSON.stringify(obj, null, 2);
-                                    } catch {
-                                      displayPath = String(obj);
-                                    }
-                                  }
-                                } else {
-                                  displayPath = String(modelPath);
-                                }
-                                
-                                // Final safety check: ensure displayPath is always a string
-                                const safeDisplayPath = typeof displayPath === "string" 
-                                  ? displayPath 
-                                  : String(displayPath ?? "(invalid mapping)");
-                                
-                                return (
-                                  <div
-                                    key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
-                                    className="text-sm text-zinc-600 dark:text-zinc-400"
-                                  >
-                                    <span className="font-medium">{slot}</span> →{" "}
-                                    <span className="text-purple-600 dark:text-purple-400 font-mono">
-                                      {safeDisplayPath}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                          </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Mappings
+                  <Badge variant="secondary" className="ml-2">
+                    {state.analysis.mappings.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {state.analysis.mappings.map((mapping, mappingIndex) => (
+                    <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border-2">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{mapping.pageName}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {mapping.componentMappings.map((cm, cmIndex) => {
+                            // Guard against undefined/null slotMappings
+                            const slotMappings = cm.slotMappings || {};
+                            
+                            return (
+                            <Card key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`} className="bg-muted/50">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base">{cm.componentName}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {Object.entries(slotMappings)
+                                    .filter(([_, modelPath]) => {
+                                      // Filter out invalid mappings (null, undefined, or non-string objects)
+                                      if (modelPath === null || modelPath === undefined) {
+                                        return false;
+                                      }
+                                      if (typeof modelPath === "string") {
+                                        return true;
+                                      }
+                                      // For objects, we'll convert them to strings, so include them
+                                      return true;
+                                    })
+                                    .map(([slot, modelPath], slotIndex) => {
+                                      // Safely convert modelPath to string for rendering
+                                      let displayPath: string;
+                                      if (typeof modelPath === "string") {
+                                        displayPath = modelPath;
+                                      } else if (modelPath === null || modelPath === undefined) {
+                                        displayPath = "(unmapped)";
+                                      } else if (typeof modelPath === "object") {
+                                        // If it's an object, try to extract a meaningful value
+                                        const obj = modelPath as Record<string, unknown>;
+                                        if ("label" in obj && typeof obj.label === "string") {
+                                          displayPath = obj.label;
+                                        } else if ("url" in obj && typeof obj.url === "string") {
+                                          displayPath = obj.url;
+                                        } else if ("path" in obj && typeof obj.path === "string") {
+                                          displayPath = obj.path;
+                                        } else {
+                                          // Fallback: stringify the object (but make it readable)
+                                          try {
+                                            displayPath = JSON.stringify(obj, null, 2);
+                                          } catch {
+                                            displayPath = String(obj);
+                                          }
+                                        }
+                                      } else {
+                                        displayPath = String(modelPath);
+                                      }
+                                      
+                                      // Final safety check: ensure displayPath is always a string
+                                      const safeDisplayPath = typeof displayPath === "string" 
+                                        ? displayPath 
+                                        : String(displayPath ?? "(invalid mapping)");
+                                      
+                                      return (
+                                        <div
+                                          key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
+                                          className="text-sm"
+                                        >
+                                          <span className="font-medium">{slot}</span> →{" "}
+                                          <span className="text-muted-foreground font-mono">
+                                            {safeDisplayPath}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </CardContent>
+                            </Card>
+                            );
+                          })}
                         </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Screenshot */}
             {state.analysis.metadata.screenshotPath && (
-              <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6">
-                <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
-                  Screenshot
-                </h2>
-                <img
-                  src={state.analysis.metadata.screenshotPath}
-                  alt="Website screenshot"
-                  className="rounded-lg border border-zinc-200 dark:border-zinc-700 w-full"
-                />
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Screenshot</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img
+                    src={state.analysis.metadata.screenshotPath}
+                    alt="Website screenshot"
+                    className="rounded-lg border w-full"
+                  />
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
