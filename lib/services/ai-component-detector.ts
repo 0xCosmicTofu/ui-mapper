@@ -22,6 +22,19 @@ export class ComponentDetector {
 
     // Use Venice model ID or default to claude-opus-45
     this.modelId = getEnv("VENICE_MODEL_ID", "claude-opus-45");
+    
+    // #region agent log
+    console.log("[DEBUG] ComponentDetector: Constructor initialized", {
+      location: "lib/services/ai-component-detector.ts:constructor",
+      modelId: this.modelId,
+      baseURL: this.openai.baseURL,
+      hasApiKey: !!veniceKey,
+      apiKeyLength: veniceKey.length,
+      apiKeyPrefix: veniceKey.substring(0, 10),
+      timestamp: new Date().toISOString(),
+      hypothesisId: "I",
+    });
+    // #endregion
   }
 
   async detectComponents(
