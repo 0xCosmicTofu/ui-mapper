@@ -297,7 +297,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         });
         // #endregion
         
-        // Handle 401 authentication errors
+        // Handle 401 authentication errors - try to list models to verify API key
         if (errorStatus === 401) {
           // #region agent log
           const rawApiKey = getEnv("VENICE_API_KEY");
@@ -316,6 +316,60 @@ Return ONLY valid JSON, no markdown formatting.`;
             hypothesisId: "Q",
           });
           // #endregion
+          
+          // Try to list models to verify if API key works at all
+          const modelsUrl = `${this.openai.baseURL}/models`;
+          try {
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Attempting to list models to verify API key", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsTest",
+              url: modelsUrl,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "Q",
+            });
+            // #endregion
+            
+            const modelsResponse = await axios.get(modelsUrl, {
+              headers: {
+                "Authorization": `Bearer ${cleanApiKey}`,
+                "Content-Type": "application/json",
+              },
+              timeout: 10000,
+              validateStatus: (status) => status < 500,
+            });
+            
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Models list response (401 test)", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsResponse",
+              status: modelsResponse.status,
+              data: modelsResponse.data,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "Q",
+            });
+            // #endregion
+            
+            // If models list works, the API key is valid but model might not exist
+            if (modelsResponse.status === 200) {
+              console.warn("[WARN] ComponentDetector: API key is valid but model may not exist", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:401ModelIssue",
+                requestedModel: this.modelId,
+                availableModels: modelsResponse.data?.data?.map((m: any) => m.id) || [],
+                timestamp: new Date().toISOString(),
+                hypothesisId: "Q",
+              });
+            }
+          } catch (modelsError: any) {
+            // #region agent log
+            console.error("[DEBUG] ComponentDetector: Models list also failed with 401", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsError",
+              error: modelsError instanceof Error ? modelsError.message : String(modelsError),
+              status: modelsError?.response?.status,
+              responseData: modelsError?.response?.data,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "Q",
+            });
+            // #endregion
+          }
         }
         
         // If SDK fails with 404, try to list available models first, then try direct HTTP
