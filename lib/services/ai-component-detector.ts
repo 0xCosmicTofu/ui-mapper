@@ -10,7 +10,9 @@ export class ComponentDetector {
   private modelId: string;
 
   constructor() {
-    const veniceKey = getEnv("VENICE_API_KEY");
+    const rawVeniceKey = getEnv("VENICE_API_KEY");
+    // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
+    const veniceKey = rawVeniceKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
     if (!veniceKey) {
       throw new Error("VENICE_API_KEY is required");
     }
