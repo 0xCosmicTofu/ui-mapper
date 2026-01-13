@@ -279,6 +279,18 @@ Return ONLY valid JSON, no markdown formatting.`;
         
         // If SDK fails with 404, try to list available models first, then try direct HTTP
         if (errorStatus === 404) {
+          // #region agent log
+          console.log("[DEBUG] ComponentDetector: 404 detected, entering fallback handler", {
+            location: "lib/services/ai-component-detector.ts:detectComponents:404Handler",
+            errorStatus,
+            modelId: this.modelId,
+            modelIdLength: this.modelId.length,
+            modelIdJSON: JSON.stringify(this.modelId),
+            timestamp: new Date().toISOString(),
+            hypothesisId: "O",
+          });
+          // #endregion
+          
           // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
           const rawApiKey = getEnv("VENICE_API_KEY");
           const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
