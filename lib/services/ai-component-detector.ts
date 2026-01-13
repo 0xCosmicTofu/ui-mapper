@@ -347,14 +347,33 @@ Return ONLY valid JSON, no markdown formatting.`;
               url: fullUrl,
               model: this.modelId,
               authHeaderFormat: `Bearer ${cleanApiKey.substring(0, 20)}...`,
+              requestPayloadKeys: Object.keys(requestPayload),
+              requestPayloadModel: requestPayload.model,
+              requestPayloadHasResponseFormat: !!requestPayload.response_format,
               timestamp: new Date().toISOString(),
               hypothesisId: "S",
             });
             // #endregion
             
-            const httpResponse = await axios.post(
+            // Try without response_format first (Venice docs mention it can cause issues)
+            const payloadWithoutFormat = {
+              ...requestPayload,
+              response_format: undefined,
+            };
+            delete (payloadWithoutFormat as any).response_format;
+            
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Trying without response_format first", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpNoFormat",
+              payloadKeys: Object.keys(payloadWithoutFormat),
+              timestamp: new Date().toISOString(),
+              hypothesisId: "S",
+            });
+            // #endregion
+            
+            let httpResponse = await axios.post(
               fullUrl,
-              requestPayload,
+              payloadWithoutFormat,
               {
                 headers: {
                   "Authorization": `Bearer ${cleanApiKey}`,
