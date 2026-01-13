@@ -166,6 +166,7 @@ Return ONLY valid JSON, no markdown formatting.`;
       }
 
       // #region agent log
+      const apiKey = getEnv("VENICE_API_KEY");
       console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
         location: "lib/services/ai-component-detector.ts:detectComponents:request",
         model: this.modelId,
@@ -176,10 +177,12 @@ Return ONLY valid JSON, no markdown formatting.`;
         hasScreenshot: !!screenshotBase64,
         messageContentLength: messageContent.length,
         messageContentTypes: messageContent.map(m => m.type),
-        hasApiKey: !!getEnv("VENICE_API_KEY"),
-        apiKeyPrefix: getEnv("VENICE_API_KEY").substring(0, 10) || "none",
+        hasApiKey: !!apiKey,
+        apiKeyLength: apiKey.length,
+        apiKeyPrefix: apiKey.substring(0, 10) || "none",
+        apiKeyFormat: apiKey.startsWith("VENICE-") ? "VENICE- prefix" : apiKey.startsWith("sk-") ? "sk- prefix" : "other",
         timestamp: new Date().toISOString(),
-        hypothesisId: "G",
+        hypothesisId: "H",
       });
       // #endregion
 
