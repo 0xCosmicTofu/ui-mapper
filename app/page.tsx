@@ -67,8 +67,26 @@ export default function Home() {
 
       const result = await response.json();
 
-      if (!result.success || !result.jobId) {
+      if (!result.success) {
         throw new Error(result.error || "Failed to start analysis");
+      }
+
+      // Handle cached results (returned immediately)
+      if (result.cached && result.analysis && result.webflowExport) {
+        setState({
+          status: "success",
+          progress: 100,
+          stage: "complete",
+          message: "Analysis retrieved from cache",
+          analysis: result.analysis,
+          webflowExport: result.webflowExport,
+        });
+        return;
+      }
+
+      // If no cached result, we need a jobId to poll
+      if (!result.jobId) {
+        throw new Error("No jobId returned and no cached result");
       }
 
       const jobId = result.jobId;
