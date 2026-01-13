@@ -13,14 +13,15 @@ export class ContentModeler {
     }
 
     // Venice AI provides OpenAI-compatible API
+    // Base URL per Venice documentation: https://api.venice.ai/api/v1
+    // Note: Venice uses /api/v1, not /v1
     this.openai = new OpenAI({
       apiKey: veniceKey,
-      baseURL: "https://api.venice.ai/v1",
+      baseURL: "https://api.venice.ai/api/v1",
     });
 
-    // Use Venice model ID or default to claude-opus-4.5 (note: dot, not dash)
-    const modelId = getEnv("VENICE_MODEL_ID");
-    this.modelId = modelId || "claude-opus-4.5";
+    // Use Venice model ID or default to claude-opus-45
+    this.modelId = getEnv("VENICE_MODEL_ID", "claude-opus-45");
   }
 
   async extractContentModels(

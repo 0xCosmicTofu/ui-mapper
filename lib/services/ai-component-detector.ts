@@ -18,8 +18,9 @@ export class ComponentDetector {
     }
 
     // Venice AI provides OpenAI-compatible API
-    // Try alternative baseURL formats if default doesn't work
-    const baseURL = getEnv("VENICE_API_BASE_URL", "https://api.venice.ai/v1");
+    // Base URL per Venice documentation: https://api.venice.ai/api/v1
+    // Note: Venice uses /api/v1, not /v1
+    const baseURL = getEnv("VENICE_API_BASE_URL", "https://api.venice.ai/api/v1");
     this.openai = new OpenAI({
       apiKey: veniceKey,
       baseURL: baseURL,
