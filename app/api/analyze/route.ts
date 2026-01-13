@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { SiteAnalyzer } from "@/lib/services/analyzer";
 import { z } from "zod";
 
+// Configure max duration for Vercel (300 seconds = 5 minutes)
+// This is required for long-running AI analysis
+export const maxDuration = 300;
+
 const AnalyzeRequestSchema = z.object({
   url: z.string().url(),
 });
@@ -43,10 +47,33 @@ export async function POST(request: NextRequest) {
     });
     // #endregion
 
-    return NextResponse.json({
+    // #region agent log
+    const responseStartTime = Date.now();
+    console.log("[DEBUG] Analyze API: About to send response", {
+      location: "app/api/analyze/route.ts:POST:beforeResponse",
+      url,
+      resultSize: JSON.stringify(result).length,
+      timestamp: new Date().toISOString(),
+      hypothesisId: "W",
+    });
+    // #endregion
+
+    const response = NextResponse.json({
       success: true,
       data: result,
     });
+
+    // #region agent log
+    console.log("[DEBUG] Analyze API: Response created, returning", {
+      location: "app/api/analyze/route.ts:POST:afterResponse",
+      url,
+      responseTime: Date.now() - responseStartTime,
+      timestamp: new Date().toISOString(),
+      hypothesisId: "W",
+    });
+    // #endregion
+
+    return response;
   } catch (error) {
     // #region agent log
     console.error("[DEBUG] Analyze API: Error occurred", {
