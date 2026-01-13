@@ -96,10 +96,10 @@ export default function Home() {
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
-      }
+            }
 
-      setState({
-        status: "success",
+            setState({
+              status: "success",
               progress: 100,
               stage: "complete",
               message: "Analysis complete!",
