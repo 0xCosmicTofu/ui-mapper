@@ -365,12 +365,29 @@ Return ONLY valid JSON, no markdown formatting.`;
             });
             // #endregion
             
+            // Log the exact Authorization header being sent
+            const authHeader = `Bearer ${cleanApiKey}`;
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Exact Authorization header being sent", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401AuthHeader",
+              authHeaderLength: authHeader.length,
+              authHeaderPrefix: authHeader.substring(0, 30),
+              authHeaderSuffix: authHeader.substring(authHeader.length - 15),
+              authHeaderCharCodes: authHeader.split('').map(c => c.charCodeAt(0)).slice(0, 30),
+              cleanApiKeyLength: cleanApiKey.length,
+              cleanApiKeyPrefix: cleanApiKey.substring(0, 20),
+              cleanApiKeySuffix: cleanApiKey.substring(cleanApiKey.length - 10),
+              timestamp: new Date().toISOString(),
+              hypothesisId: "T",
+            });
+            // #endregion
+            
             let httpResponse = await axios.post(
               fullUrl,
               payloadWithoutFormat,
               {
                 headers: {
-                  "Authorization": `Bearer ${cleanApiKey}`,
+                  "Authorization": authHeader,
                   "Content-Type": "application/json",
                 },
                 timeout: 60000,
