@@ -319,6 +319,7 @@ Return ONLY valid JSON, no markdown formatting.`;
           
           // Try to list models to verify if API key works at all
           const modelsUrl = `${this.openai.baseURL}/models`;
+          const fullUrl = `${this.openai.baseURL}/chat/completions`;
           try {
             // #region agent log
             console.log("[DEBUG] ComponentDetector: Attempting to list models to verify API key", {
@@ -350,13 +351,84 @@ Return ONLY valid JSON, no markdown formatting.`;
             
             // If models list works, the API key is valid but model might not exist
             if (modelsResponse.status === 200) {
+              const availableModels = modelsResponse.data?.data?.map((m: any) => m.id) || [];
               console.warn("[WARN] ComponentDetector: API key is valid but model may not exist", {
                 location: "lib/services/ai-component-detector.ts:detectComponents:401ModelIssue",
                 requestedModel: this.modelId,
-                availableModels: modelsResponse.data?.data?.map((m: any) => m.id) || [],
+                availableModels: availableModels,
                 timestamp: new Date().toISOString(),
                 hypothesisId: "Q",
               });
+              
+              // Try alternative models if the requested model doesn't exist
+              const alternativeModels = [
+                "claude-opus-4.5",  // With dot
+                "claude-3-opus-20240229",  // Full Claude 3 format
+                "claude-3-5-sonnet-20241022",  // Claude 3.5 format
+                "gpt-4",  // Fallback to GPT-4 if available
+                ...availableModels.slice(0, 3),  // Try first 3 available models
+              ];
+              
+              for (const altModel of alternativeModels) {
+                try {
+                  // #region agent log
+                  console.log("[DEBUG] ComponentDetector: Trying alternative model (401 handler)", {
+                    location: "lib/services/ai-component-detector.ts:detectComponents:401TryAltModel",
+                    model: altModel,
+                    timestamp: new Date().toISOString(),
+                    hypothesisId: "Q",
+                  });
+                  // #endregion
+                  
+                  const altPayload = { ...requestPayload, model: altModel };
+                  const httpResponse = await axios.post(
+                    fullUrl,
+                    altPayload,
+                    {
+                      headers: {
+                        "Authorization": `Bearer ${cleanApiKey}`,
+                        "Content-Type": "application/json",
+                      },
+                      timeout: 60000,
+                      validateStatus: (status) => status < 500,
+                    }
+                  );
+                  
+                  if (httpResponse.status === 200 && httpResponse.data) {
+                    // #region agent log
+                    console.log("[DEBUG] ComponentDetector: Alternative model worked (401 handler)!", {
+                      location: "lib/services/ai-component-detector.ts:detectComponents:401AltModelSuccess",
+                      model: altModel,
+                      timestamp: new Date().toISOString(),
+                      hypothesisId: "Q",
+                    });
+                    // #endregion
+                    
+                    // Convert axios response to OpenAI SDK format
+                    response = {
+                      choices: [
+                        {
+                          message: {
+                            content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                          },
+                        },
+                      ],
+                    } as any;
+                    break; // Success! Exit the loop
+                  }
+                } catch (altError: any) {
+                  // #region agent log
+                  console.log("[DEBUG] ComponentDetector: Alternative model error (401 handler)", {
+                    location: "lib/services/ai-component-detector.ts:detectComponents:401AltModelError",
+                    model: altModel,
+                    error: altError instanceof Error ? altError.message : String(altError),
+                    status: altError?.response?.status,
+                    timestamp: new Date().toISOString(),
+                    hypothesisId: "Q",
+                  });
+                  // #endregion
+                }
+              }
             }
           } catch (modelsError: any) {
             // #region agent log
@@ -369,6 +441,11 @@ Return ONLY valid JSON, no markdown formatting.`;
               hypothesisId: "Q",
             });
             // #endregion
+          }
+          
+          // If we got a response from an alternative model, use it; otherwise throw the original error
+          if (!response) {
+            throw sdkError;
           }
         }
         
