@@ -2,7 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { SiteAnalyzer } from "@/lib/services/analyzer";
 import { jobStore } from "@/lib/services/job-store";
 import { z } from "zod";
-import { randomUUID } from "crypto";
+
+// Generate a unique job ID
+function generateJobId(): string {
+  // Try to use crypto.randomUUID if available (Node.js 14.17.0+)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback: generate a simple UUID v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 const AnalyzeRequestSchema = z.object({
   url: z.string().url(),
@@ -26,7 +39,7 @@ export async function POST(request: NextRequest) {
     const { url } = AnalyzeRequestSchema.parse(body);
 
     // Generate job ID
-    const jobId = randomUUID();
+    const jobId = generateJobId();
 
     // Create job in store
     jobStore.createJob(jobId);
