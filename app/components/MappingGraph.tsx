@@ -130,13 +130,23 @@ export function MappingGraph({
               nodePositions.has(targetId)
             ) {
               // Check if edge already exists to avoid duplicates
+              // Check by source, target, AND label to prevent duplicate labels
               const edgeExists = edges.some(
                 (e) => e.source === sourceId && e.target === targetId && e.label === slot
               );
 
               if (!edgeExists) {
+                // Calculate offset for multiple edges between same nodes
+                // Count how many edges already exist between these nodes
+                const existingEdgesCount = edges.filter(
+                  (e) => e.source === sourceId && e.target === targetId
+                ).length;
+                
+                // Offset label position for multiple edges to prevent overlap
+                const labelOffset = existingEdgesCount * 15;
+
                 edges.push({
-                  id: `${sourceId}-${targetId}-${slot}`,
+                  id: `${sourceId}-${targetId}-${slot}-${edges.length}`,
                   source: sourceId,
                   target: targetId,
                   label: slot,
@@ -162,6 +172,11 @@ export function MappingGraph({
                   },
                   labelBgPadding: [4, 6],
                   labelBgBorderRadius: 4,
+                  labelShowBg: true,
+                  // Offset label to avoid overlap with other edges
+                  ...(labelOffset > 0 && {
+                    labelOffset: labelOffset,
+                  }),
                 });
               }
             }
