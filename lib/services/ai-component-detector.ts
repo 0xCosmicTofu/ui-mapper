@@ -166,18 +166,6 @@ Return ONLY valid JSON, no markdown formatting.`;
       }
 
       // #region agent log
-      const requestPayload = {
-        model: this.modelId,
-        max_tokens: 4000,
-        messages: [
-          {
-            role: "user",
-            content: messageContent,
-          },
-        ],
-        response_format: { type: "json_object" },
-      };
-      
       console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
         location: "lib/services/ai-component-detector.ts:detectComponents:request",
         model: this.modelId,
@@ -190,13 +178,22 @@ Return ONLY valid JSON, no markdown formatting.`;
         messageContentTypes: messageContent.map(m => m.type),
         hasApiKey: !!getEnv("VENICE_API_KEY"),
         apiKeyPrefix: getEnv("VENICE_API_KEY").substring(0, 10) || "none",
-        requestPayload: JSON.stringify(requestPayload).substring(0, 500),
         timestamp: new Date().toISOString(),
         hypothesisId: "G",
       });
       // #endregion
 
-      const response = await this.openai.chat.completions.create(requestPayload);
+      const response = await this.openai.chat.completions.create({
+        model: this.modelId,
+        max_tokens: 4000,
+        messages: [
+          {
+            role: "user",
+            content: messageContent,
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
