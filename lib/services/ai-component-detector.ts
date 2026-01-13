@@ -309,6 +309,18 @@ Return ONLY valid JSON, no markdown formatting.`;
             });
             // #endregion
             
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Models request details", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:modelsRequest",
+              url: modelsUrl,
+              authHeaderPrefix: `Bearer ${cleanApiKey.substring(0, 20)}...`,
+              apiKeyLength: cleanApiKey.length,
+              apiKeyStartsWith: cleanApiKey.substring(0, 10),
+              timestamp: new Date().toISOString(),
+              hypothesisId: "P",
+            });
+            // #endregion
+            
             const modelsResponse = await axios.get(modelsUrl, {
               headers: {
                 "Authorization": `Bearer ${cleanApiKey}`,
