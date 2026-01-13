@@ -1,4 +1,5 @@
 import axios from "axios";
+import { preprocessHTML } from "../utils/html-preprocessor";
 
 export interface ScrapeResult {
   html: string;
@@ -27,17 +28,23 @@ export class WebScraper {
         // maxRedirects is handled automatically by axios
       });
 
-      const html = response.data as string;
+      const rawHtml = response.data as string;
       
-      // Extract title from HTML
-      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      // Preprocess HTML to reduce size and improve AI processing speed
+      const html = preprocessHTML(rawHtml, 50000);
+      
+      // Extract title from HTML (before preprocessing to ensure we get it)
+      const titleMatch = rawHtml.match(/<title[^>]*>([^<]+)<\/title>/i);
       const title = titleMatch ? titleMatch[1].trim() : "Untitled";
 
       // #region agent log
       console.log("[DEBUG] WebScraper: Scrape completed successfully", {
         location: "lib/services/scraper.ts:scrape:success",
         url,
-        htmlLength: html.length,
+        rawHtmlLength: rawHtml.length,
+        processedHtmlLength: html.length,
+        reduction: rawHtml.length - html.length,
+        reductionPercent: ((rawHtml.length - html.length) / rawHtml.length * 100).toFixed(1),
         title,
         timestamp: new Date().toISOString(),
         hypothesisId: "F",
