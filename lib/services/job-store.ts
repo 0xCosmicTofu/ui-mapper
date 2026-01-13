@@ -70,8 +70,9 @@ class JobStore {
 // Singleton instance
 export const jobStore = new JobStore();
 
-// Cleanup old jobs every 10 minutes
-if (typeof setInterval !== 'undefined') {
+// Cleanup old jobs every 10 minutes (only in Node.js environment)
+// In serverless, cleanup happens on each request
+if (typeof process !== 'undefined' && process.env && typeof setInterval !== 'undefined') {
   setInterval(() => {
     jobStore.cleanup();
   }, 10 * 60 * 1000);
