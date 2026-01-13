@@ -248,9 +248,9 @@ Return ONLY valid JSON, no markdown formatting.`;
       };
 
       // #region agent log
-      const apiKey = getEnv("VENICE_API_KEY");
+      const rawApiKey = getEnv("VENICE_API_KEY");
       // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
-      const cleanApiKey = apiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
+      const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
       const fullUrl = `${this.openai.baseURL}/chat/completions`;
       console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
         location: "lib/services/ai-component-detector.ts:detectComponents:request",
@@ -269,7 +269,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         apiKeyLength: cleanApiKey.length,
         apiKeyPrefix: cleanApiKey.substring(0, 15) || "none",
         apiKeyFormat: cleanApiKey.startsWith("VENICE-") ? "VENICE- prefix" : cleanApiKey.startsWith("sk-") ? "sk- prefix" : "other",
-        rawApiKeyPrefix: apiKey.substring(0, 20),
+        rawApiKeyPrefix: rawApiKey.substring(0, 20),
         timestamp: new Date().toISOString(),
         hypothesisId: "J",
       });
@@ -277,11 +277,6 @@ Return ONLY valid JSON, no markdown formatting.`;
 
       // Try OpenAI SDK first, but also prepare for direct HTTP fallback if needed
       let response;
-      
-      // #region agent log
-      // Log the exact API key that will be used by OpenAI SDK
-      const rawApiKey = getEnv("VENICE_API_KEY");
-      const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
       console.log("[DEBUG] ComponentDetector: About to make OpenAI SDK request", {
         location: "lib/services/ai-component-detector.ts:detectComponents:preRequest",
         model: this.modelId,
@@ -319,8 +314,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         // Handle 401 authentication errors - try direct HTTP with exact same model
         if (errorStatus === 401) {
           // #region agent log
-          const rawApiKey = getEnv("VENICE_API_KEY");
-          const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
+          // cleanApiKey is already declared above, reuse it
           console.error("[DEBUG] ComponentDetector: 401 Authentication failed", {
             location: "lib/services/ai-component-detector.ts:detectComponents:401Error",
             errorStatus,
@@ -413,11 +407,12 @@ Return ONLY valid JSON, no markdown formatting.`;
               // #endregion
               
               // Convert axios response to OpenAI SDK format
+              const responseData = httpResponse.data as any;
               response = {
                 choices: [
                   {
                     message: {
-                      content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                      content: responseData.choices?.[0]?.message?.content || JSON.stringify(responseData),
                     },
                   },
                 ],
