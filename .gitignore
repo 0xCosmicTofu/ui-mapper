@@ -32,6 +32,7 @@ yarn-error.log*
 # production env files (contain secrets - DO NOT COMMIT)
 .env.vercel
 .env.vercel.bak
+.env.vercel.test
 .env.production
 .env.production.local
 
