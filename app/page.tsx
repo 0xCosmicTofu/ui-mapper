@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { AnalysisResult, WebflowExport } from "@/lib/types";
 import { MappingGraph } from "./components/MappingGraph";
 
 type AnalysisState = {
   status: "idle" | "analyzing" | "success" | "error";
+  progress?: number;
+  stage?: string;
+  message?: string;
   analysis?: AnalysisResult;
   webflowExport?: WebflowExport;
   error?: string;
@@ -14,6 +17,17 @@ type AnalysisState = {
 export default function Home() {
   const [url, setUrl] = useState("");
   const [state, setState] = useState<AnalysisState>({ status: "idle" });
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const handleAnalyze = async () => {
     if (!url.trim()) {
@@ -21,9 +35,21 @@ export default function Home() {
       return;
     }
 
-    setState({ status: "analyzing" });
+    // Clear any existing polling
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+
+    setState({ 
+      status: "analyzing",
+      progress: 0,
+      stage: "initializing",
+      message: "Starting analysis...",
+    });
 
     try {
+      // Start the analysis job
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: {
@@ -34,16 +60,71 @@ export default function Home() {
 
       const result = await response.json();
 
-      if (!result.success) {
-        throw new Error(result.error || "Analysis failed");
+      if (!result.success || !result.jobId) {
+        throw new Error(result.error || "Failed to start analysis");
       }
 
-      setState({
-        status: "success",
-        analysis: result.data.analysis,
-        webflowExport: result.data.webflowExport,
-      });
+      const jobId = result.jobId;
+
+      // Poll for status updates
+      const pollStatus = async () => {
+        try {
+          const statusResponse = await fetch(`/api/analyze/status/${jobId}`);
+          const statusResult = await statusResponse.json();
+
+          if (!statusResult.success) {
+            throw new Error(statusResult.error || "Failed to get status");
+          }
+
+          // Update state with progress
+          setState((prev) => ({
+            ...prev,
+            progress: statusResult.progress || prev.progress,
+            stage: statusResult.stage || prev.stage,
+            message: statusResult.message || prev.message,
+          }));
+
+          // Check if complete or error
+          if (statusResult.status === "complete") {
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+
+            setState({
+              status: "success",
+              progress: 100,
+              stage: "complete",
+              message: "Analysis complete!",
+              analysis: statusResult.result?.analysis,
+              webflowExport: statusResult.result?.webflowExport,
+            });
+          } else if (statusResult.status === "error") {
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+
+            setState({
+              status: "error",
+              error: statusResult.error || statusResult.message || "Analysis failed",
+            });
+          }
+        } catch (error) {
+          console.error("Polling error:", error);
+          // Don't stop polling on transient errors, just log
+        }
+      };
+
+      // Poll immediately, then every 2 seconds
+      await pollStatus();
+      pollIntervalRef.current = setInterval(pollStatus, 2000);
     } catch (error) {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+
       setState({
         status: "error",
         error: error instanceof Error ? error.message : "Unknown error",
@@ -120,15 +201,30 @@ export default function Home() {
 
         {state.status === "analyzing" && (
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <div>
-                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Analyzing website...
-                </p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  This may take 30-60 seconds
-                </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="flex-1">
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {state.message || "Analyzing website..."}
+                  </p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 capitalize">
+                    {state.stage || "processing"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {state.progress || 0}%
+                  </p>
+                </div>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-3">
+                <div
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${state.progress || 0}%` }}
+                />
               </div>
             </div>
           </div>
