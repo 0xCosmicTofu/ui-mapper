@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SiteAnalyzer } from "@/lib/services/analyzer";
 import { jobStore } from "@/lib/services/job-store";
+import { analysisCache } from "@/lib/services/cache";
 import { z } from "zod";
 
 // Generate a unique job ID
@@ -37,6 +38,28 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { url } = AnalyzeRequestSchema.parse(body);
+
+    // Check cache first
+    const cached = analysisCache.get(url);
+    if (cached) {
+      // #region agent log
+      console.log("[DEBUG] Analyze API: Returning cached result", {
+        location: "app/api/analyze/route.ts:POST:cacheHit",
+        url,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "CACHE",
+      });
+      // #endregion
+
+      // Return cached result immediately
+      return NextResponse.json({
+        success: true,
+        cached: true,
+        analysis: cached.analysis,
+        webflowExport: cached.webflowExport,
+        message: 'Analysis retrieved from cache',
+      });
+    }
 
     // Generate job ID
     const jobId = generateJobId();
@@ -239,6 +262,9 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
         screenshotPath: scrapeResult.screenshotPath,
       },
     };
+
+    // Store in cache for future requests
+    analysisCache.set(url, analysis, webflowExport);
 
     // Mark as complete
     jobStore.updateJob(jobId, {
