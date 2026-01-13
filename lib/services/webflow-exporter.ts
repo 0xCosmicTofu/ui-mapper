@@ -34,9 +34,47 @@ export class WebflowExporter {
       const bindings: Record<string, string> = {};
       
       if (componentMapping) {
+        // #region agent log
+        console.log("[DEBUG] WebflowExporter: Processing component mapping", {
+          location: "lib/services/webflow-exporter.ts:exportToWebflow:componentMapping",
+          componentName: component.name,
+          slotMappings: componentMapping.slotMappings,
+          slotMappingsType: typeof componentMapping.slotMappings,
+          slotMappingsKeys: Object.keys(componentMapping.slotMappings),
+          timestamp: new Date().toISOString(),
+          hypothesisId: "V",
+        });
+        // #endregion
+        
         // Map slots to collection fields
         Object.entries(componentMapping.slotMappings).forEach(
           ([slotName, modelPath]) => {
+            // #region agent log
+            console.log("[DEBUG] WebflowExporter: Processing slot mapping", {
+              location: "lib/services/webflow-exporter.ts:exportToWebflow:slotMapping",
+              slotName,
+              modelPath,
+              modelPathType: typeof modelPath,
+              modelPathIsString: typeof modelPath === "string",
+              modelPathValue: modelPath,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "V",
+            });
+            // #endregion
+            
+            // Validate modelPath is a string
+            if (typeof modelPath !== "string") {
+              console.warn("[WARN] WebflowExporter: modelPath is not a string, skipping", {
+                location: "lib/services/webflow-exporter.ts:exportToWebflow:invalidModelPath",
+                slotName,
+                modelPath,
+                modelPathType: typeof modelPath,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "V",
+              });
+              return; // Skip this mapping
+            }
+            
             // Extract model and field from path (e.g., "Event.title" -> "Event", "title")
             const [modelName, ...fieldPath] = modelPath.split(".");
             const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, ""); // Remove array indices
@@ -109,6 +147,29 @@ export class WebflowExporter {
     const collectionCounts: Record<string, number> = {};
     
     Object.values(componentMapping.slotMappings).forEach((path) => {
+      // #region agent log
+      console.log("[DEBUG] WebflowExporter: Processing path in findPrimaryCollection", {
+        location: "lib/services/webflow-exporter.ts:findPrimaryCollectionForComponent:path",
+        path,
+        pathType: typeof path,
+        pathIsString: typeof path === "string",
+        timestamp: new Date().toISOString(),
+        hypothesisId: "V",
+      });
+      // #endregion
+      
+      // Validate path is a string
+      if (typeof path !== "string") {
+        console.warn("[WARN] WebflowExporter: path is not a string, skipping", {
+          location: "lib/services/webflow-exporter.ts:findPrimaryCollectionForComponent:invalidPath",
+          path,
+          pathType: typeof path,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "V",
+        });
+        return; // Skip this path
+      }
+      
       const [modelName] = path.split(".");
       const collection = collections.find((c) => c.name === modelName);
       if (collection) {
