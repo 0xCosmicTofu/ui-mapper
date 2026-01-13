@@ -4,6 +4,7 @@ import { join } from "path";
 import type { UIComponent } from "../types";
 import { getEnv } from "../utils/env";
 import axios from "axios";
+import axios from "axios";
 
 export class ComponentDetector {
   private openai: OpenAI;
@@ -221,7 +222,102 @@ Return ONLY valid JSON, no markdown formatting.`;
       });
       // #endregion
 
-      const response = await this.openai.chat.completions.create(requestPayload);
+      // Try OpenAI SDK first, but also prepare for direct HTTP fallback if needed
+      let response;
+      try {
+        response = await this.openai.chat.completions.create(requestPayload);
+      } catch (sdkError: any) {
+        // #region agent log
+        console.error("[DEBUG] ComponentDetector: OpenAI SDK request failed, attempting direct HTTP", {
+          location: "lib/services/ai-component-detector.ts:detectComponents:sdkError",
+          sdkError: sdkError instanceof Error ? sdkError.message : String(sdkError),
+          sdkErrorStatus: sdkError?.response?.status,
+          sdkErrorData: sdkError?.response?.data,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "K",
+        });
+        // #endregion
+        
+        // If SDK fails with 404, try direct HTTP to see exact response
+        if (sdkError?.response?.status === 404) {
+          const apiKey = getEnv("VENICE_API_KEY");
+          const fullUrl = `${this.openai.baseURL}/chat/completions`;
+          
+          // #region agent log
+          console.log("[DEBUG] ComponentDetector: Attempting direct HTTP request", {
+            location: "lib/services/ai-component-detector.ts:detectComponents:directHttp",
+            url: fullUrl,
+            method: "POST",
+            hasApiKey: !!apiKey,
+            apiKeyPrefix: apiKey.substring(0, 15),
+            timestamp: new Date().toISOString(),
+            hypothesisId: "K",
+          });
+          // #endregion
+          
+          try {
+            const httpResponse = await axios.post(
+              fullUrl,
+              requestPayload,
+              {
+                headers: {
+                  "Authorization": `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: 60000,
+                validateStatus: (status) => status < 500, // Don't throw on 4xx
+              }
+            );
+            
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Direct HTTP response", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:directHttpResponse",
+              status: httpResponse.status,
+              statusText: httpResponse.statusText,
+              headers: httpResponse.headers,
+              dataType: typeof httpResponse.data,
+              dataPreview: typeof httpResponse.data === 'string' 
+                ? httpResponse.data.substring(0, 500)
+                : JSON.stringify(httpResponse.data).substring(0, 500),
+              timestamp: new Date().toISOString(),
+              hypothesisId: "K",
+            });
+            // #endregion
+            
+            if (httpResponse.status === 200 && httpResponse.data) {
+              // Convert axios response to OpenAI SDK format
+              response = {
+                choices: [
+                  {
+                    message: {
+                      content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                    },
+                  },
+                ],
+              } as any;
+            } else {
+              throw new Error(
+                `Direct HTTP request failed: ${httpResponse.status} ${httpResponse.statusText}. Response: ${JSON.stringify(httpResponse.data)}`
+              );
+            }
+          } catch (httpError: any) {
+            // #region agent log
+            console.error("[DEBUG] ComponentDetector: Direct HTTP request also failed", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:directHttpError",
+              error: httpError instanceof Error ? httpError.message : String(httpError),
+              status: httpError?.response?.status,
+              statusText: httpError?.response?.statusText,
+              responseData: httpError?.response?.data,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "K",
+            });
+            // #endregion
+            throw sdkError; // Re-throw original SDK error
+          }
+        } else {
+          throw sdkError; // Re-throw if not 404
+        }
+      }
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
