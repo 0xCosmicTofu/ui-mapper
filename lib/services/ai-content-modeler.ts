@@ -18,8 +18,9 @@ export class ContentModeler {
       baseURL: "https://api.venice.ai/v1",
     });
 
-    // Use Venice model ID or default to claude-opus-45
-    this.modelId = getEnv("VENICE_MODEL_ID", "claude-opus-45");
+    // Use Venice model ID or default to claude-opus-4.5 (note: dot, not dash)
+    const modelId = getEnv("VENICE_MODEL_ID");
+    this.modelId = modelId || "claude-opus-4.5";
   }
 
   async extractContentModels(
