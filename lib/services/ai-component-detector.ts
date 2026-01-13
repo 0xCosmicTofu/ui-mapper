@@ -252,16 +252,38 @@ Return ONLY valid JSON, no markdown formatting.`;
         errorDetails.responseStatus = response?.status;
         errorDetails.responseStatusText = response?.statusText;
         errorDetails.responseData = response?.data;
-        errorDetails.responseDataString = response?.data ? JSON.stringify(response.data) : null;
-        errorDetails.responseHeaders = response?.headers;
-        // Try to extract error message from response data
+        
+        // Try to parse response data to get Venice AI's error message
         if (response?.data) {
           try {
             const dataStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            errorDetails.responseDataParsed = dataStr;
+            errorDetails.responseDataString = dataStr;
+            // Try to parse as JSON if it's a string
+            if (typeof response.data === 'string') {
+              try {
+                errorDetails.responseDataParsed = JSON.parse(response.data);
+              } catch (e) {
+                errorDetails.responseDataRaw = response.data;
+              }
+            } else {
+              errorDetails.responseDataParsed = response.data;
+            }
           } catch (e) {
             errorDetails.responseDataParseError = e instanceof Error ? e.message : String(e);
           }
+        }
+        
+        errorDetails.responseHeaders = response?.headers;
+      }
+      
+      // Also check if error has a 'body' property (some SDKs put response data there)
+      if (error && typeof error === 'object' && 'body' in error) {
+        try {
+          errorDetails.errorBody = typeof (error as any).body === 'string' 
+            ? (error as any).body 
+            : JSON.stringify((error as any).body);
+        } catch (e) {
+          // Ignore
         }
       }
 
