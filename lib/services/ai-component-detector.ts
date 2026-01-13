@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { UIComponent } from "../types";
 import { getEnv } from "../utils/env";
+import axios from "axios";
 
 export class ComponentDetector {
   private openai: OpenAI;
