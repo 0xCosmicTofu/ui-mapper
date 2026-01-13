@@ -153,9 +153,15 @@ export function MappingGraph({
                     fontSize: 11,
                   },
                   labelBgStyle: {
-                    fill: "#f3e8ff",
-                    fillOpacity: 0.9,
+                    fill: "#ffffff",
+                    fillOpacity: 1,
+                    stroke: "#8b5cf6",
+                    strokeWidth: 1,
+                    rx: 4,
+                    ry: 4,
                   },
+                  labelBgPadding: [4, 6],
+                  labelBgBorderRadius: 4,
                 });
               }
             }
