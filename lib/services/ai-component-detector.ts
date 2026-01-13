@@ -385,11 +385,16 @@ Return ONLY valid JSON, no markdown formatting.`;
             );
             
             // #region agent log
-            console.log("[DEBUG] ComponentDetector: Direct HTTP response (401 handler)", {
+            console.log("[DEBUG] ComponentDetector: Direct HTTP response (401 handler, no format)", {
               location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpResponse",
               status: httpResponse.status,
               statusText: httpResponse.statusText,
-              responseHeaders: httpResponse.headers,
+              responseHeaders: {
+                'cf-ray': httpResponse.headers['cf-ray'],
+                'x-ratelimit-remaining': httpResponse.headers['x-ratelimit-remaining'],
+                'x-venice-balance-usd': httpResponse.headers['x-venice-balance-usd'],
+                'x-venice-balance-diem': httpResponse.headers['x-venice-balance-diem'],
+              },
               dataPreview: JSON.stringify(httpResponse.data).substring(0, 500),
               timestamp: new Date().toISOString(),
               hypothesisId: "S",
@@ -398,9 +403,10 @@ Return ONLY valid JSON, no markdown formatting.`;
             
             if (httpResponse.status === 200 && httpResponse.data) {
               // #region agent log
-              console.log("[DEBUG] ComponentDetector: Direct HTTP succeeded with claude-opus-45!", {
+              console.log("[DEBUG] ComponentDetector: Direct HTTP succeeded without response_format!", {
                 location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpSuccess",
                 model: this.modelId,
+                cfRay: httpResponse.headers['cf-ray'],
                 timestamp: new Date().toISOString(),
                 hypothesisId: "S",
               });
@@ -416,6 +422,50 @@ Return ONLY valid JSON, no markdown formatting.`;
                   },
                 ],
               } as any;
+            } else if (httpResponse.status === 401) {
+              // Still 401, try with response_format
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Still 401, trying with response_format", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpWithFormat",
+                timestamp: new Date().toISOString(),
+                hypothesisId: "S",
+              });
+              // #endregion
+              
+              httpResponse = await axios.post(
+                fullUrl,
+                requestPayload, // Original with response_format
+                {
+                  headers: {
+                    "Authorization": `Bearer ${cleanApiKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  timeout: 60000,
+                  validateStatus: (status) => status < 500,
+                }
+              );
+              
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Direct HTTP response (with format)", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpResponseFormat",
+                status: httpResponse.status,
+                cfRay: httpResponse.headers['cf-ray'],
+                timestamp: new Date().toISOString(),
+                hypothesisId: "S",
+              });
+              // #endregion
+              
+              if (httpResponse.status === 200 && httpResponse.data) {
+                response = {
+                  choices: [
+                    {
+                      message: {
+                        content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                      },
+                    },
+                  ],
+                } as any;
+              }
             } else {
               // #region agent log
               console.error("[DEBUG] ComponentDetector: Direct HTTP also returned non-200", {
