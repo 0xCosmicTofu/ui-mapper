@@ -278,6 +278,27 @@ Return ONLY valid JSON, no markdown formatting.`;
         });
         // #endregion
         
+        // Handle 401 authentication errors
+        if (errorStatus === 401) {
+          // #region agent log
+          const rawApiKey = getEnv("VENICE_API_KEY");
+          const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
+          console.error("[DEBUG] ComponentDetector: 401 Authentication failed", {
+            location: "lib/services/ai-component-detector.ts:detectComponents:401Error",
+            errorStatus,
+            apiKeyLength: cleanApiKey.length,
+            apiKeyPrefix: cleanApiKey.substring(0, 20),
+            apiKeyFormat: cleanApiKey.startsWith("VENICE-") ? "VENICE- prefix" : cleanApiKey.startsWith("sk-") ? "sk- prefix" : "other",
+            hasTrailingNewline: cleanApiKey.endsWith('\n') || cleanApiKey.endsWith('\r'),
+            apiKeyCharCodes: cleanApiKey.split('').map(c => c.charCodeAt(0)).slice(-5), // Last 5 chars
+            apiKeyJSON: JSON.stringify(cleanApiKey.substring(0, 30)), // First 30 chars as JSON to show hidden chars
+            baseURL: this.openai.baseURL,
+            timestamp: new Date().toISOString(),
+            hypothesisId: "Q",
+          });
+          // #endregion
+        }
+        
         // If SDK fails with 404, try to list available models first, then try direct HTTP
         if (errorStatus === 404) {
           // #region agent log
