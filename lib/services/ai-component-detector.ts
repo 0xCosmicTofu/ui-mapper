@@ -182,38 +182,45 @@ Return ONLY valid JSON, no markdown formatting.`;
         });
       }
 
+      // Build the request payload
+      const requestPayload = {
+        model: this.modelId,
+        max_tokens: 4000,
+        messages: [
+          {
+            role: "user" as const,
+            content: messageContent,
+          },
+        ],
+        response_format: { type: "json_object" as const },
+      };
+
       // #region agent log
       const apiKey = getEnv("VENICE_API_KEY");
+      const fullUrl = `${this.openai.baseURL}/chat/completions`;
       console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
         location: "lib/services/ai-component-detector.ts:detectComponents:request",
         model: this.modelId,
         modelLength: this.modelId.length,
         modelCharCodes: this.modelId.split('').map(c => c.charCodeAt(0)).slice(0, 20),
         baseURL: this.openai.baseURL,
+        fullRequestUrl: fullUrl,
         expectedEndpoint: `${this.openai.baseURL}/chat/completions`,
+        requestPayload: JSON.stringify(requestPayload).substring(0, 1000),
+        requestPayloadSize: JSON.stringify(requestPayload).length,
         hasScreenshot: !!screenshotBase64,
         messageContentLength: messageContent.length,
         messageContentTypes: messageContent.map(m => m.type),
         hasApiKey: !!apiKey,
         apiKeyLength: apiKey.length,
-        apiKeyPrefix: apiKey.substring(0, 10) || "none",
+        apiKeyPrefix: apiKey.substring(0, 15) || "none",
         apiKeyFormat: apiKey.startsWith("VENICE-") ? "VENICE- prefix" : apiKey.startsWith("sk-") ? "sk- prefix" : "other",
         timestamp: new Date().toISOString(),
-        hypothesisId: "H",
+        hypothesisId: "J",
       });
       // #endregion
 
-      const response = await this.openai.chat.completions.create({
-        model: this.modelId,
-        max_tokens: 4000,
-        messages: [
-          {
-            role: "user",
-            content: messageContent,
-          },
-        ],
-        response_format: { type: "json_object" },
-      });
+      const response = await this.openai.chat.completions.create(requestPayload);
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
