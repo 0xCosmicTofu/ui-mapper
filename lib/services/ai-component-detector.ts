@@ -20,8 +20,10 @@ export class ComponentDetector {
       baseURL: "https://api.venice.ai/v1",
     });
 
-    // Use Venice model ID or default to claude-opus-45
-    this.modelId = getEnv("VENICE_MODEL_ID", "claude-opus-45");
+    // Use Venice model ID or default to claude-opus-4.5 (note: dot, not dash)
+    // Try claude-opus-4.5 first, fallback to claude-opus-45 if needed
+    const modelId = getEnv("VENICE_MODEL_ID");
+    this.modelId = modelId || "claude-opus-4.5";
   }
 
   async detectComponents(
@@ -252,7 +254,17 @@ Return ONLY valid JSON, no markdown formatting.`;
         errorDetails.responseStatus = response?.status;
         errorDetails.responseStatusText = response?.statusText;
         errorDetails.responseData = response?.data;
+        errorDetails.responseDataString = response?.data ? JSON.stringify(response.data) : null;
         errorDetails.responseHeaders = response?.headers;
+        // Try to extract error message from response data
+        if (response?.data) {
+          try {
+            const dataStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            errorDetails.responseDataParsed = dataStr;
+          } catch (e) {
+            errorDetails.responseDataParseError = e instanceof Error ? e.message : String(e);
+          }
+        }
       }
 
       // Extract request details if available
