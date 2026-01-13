@@ -198,6 +198,8 @@ Return ONLY valid JSON, no markdown formatting.`;
 
       // #region agent log
       const apiKey = getEnv("VENICE_API_KEY");
+      // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
+      const cleanApiKey = apiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
       const fullUrl = `${this.openai.baseURL}/chat/completions`;
       console.log("[DEBUG] ComponentDetector: Sending request to Venice AI", {
         location: "lib/services/ai-component-detector.ts:detectComponents:request",
@@ -212,10 +214,11 @@ Return ONLY valid JSON, no markdown formatting.`;
         hasScreenshot: !!screenshotBase64,
         messageContentLength: messageContent.length,
         messageContentTypes: messageContent.map(m => m.type),
-        hasApiKey: !!apiKey,
-        apiKeyLength: apiKey.length,
-        apiKeyPrefix: apiKey.substring(0, 15) || "none",
-        apiKeyFormat: apiKey.startsWith("VENICE-") ? "VENICE- prefix" : apiKey.startsWith("sk-") ? "sk- prefix" : "other",
+        hasApiKey: !!cleanApiKey,
+        apiKeyLength: cleanApiKey.length,
+        apiKeyPrefix: cleanApiKey.substring(0, 15) || "none",
+        apiKeyFormat: cleanApiKey.startsWith("VENICE-") ? "VENICE- prefix" : cleanApiKey.startsWith("sk-") ? "sk- prefix" : "other",
+        rawApiKeyPrefix: apiKey.substring(0, 20),
         timestamp: new Date().toISOString(),
         hypothesisId: "J",
       });
@@ -226,20 +229,28 @@ Return ONLY valid JSON, no markdown formatting.`;
       try {
         response = await this.openai.chat.completions.create(requestPayload);
       } catch (sdkError: any) {
+        // OpenAI SDK error structure: error.status (not error.response.status)
+        const errorStatus = sdkError?.status || sdkError?.response?.status;
+        
         // #region agent log
         console.error("[DEBUG] ComponentDetector: OpenAI SDK request failed, attempting direct HTTP", {
           location: "lib/services/ai-component-detector.ts:detectComponents:sdkError",
           sdkError: sdkError instanceof Error ? sdkError.message : String(sdkError),
-          sdkErrorStatus: sdkError?.response?.status,
-          sdkErrorData: sdkError?.response?.data,
+          sdkErrorStatus: errorStatus,
+          sdkErrorStatusDirect: sdkError?.status,
+          sdkErrorResponseStatus: sdkError?.response?.status,
+          sdkErrorData: sdkError?.response?.data || sdkError?.error,
+          sdkErrorKeys: Object.keys(sdkError || {}),
           timestamp: new Date().toISOString(),
           hypothesisId: "K",
         });
         // #endregion
         
         // If SDK fails with 404, try direct HTTP to see exact response
-        if (sdkError?.response?.status === 404) {
-          const apiKey = getEnv("VENICE_API_KEY");
+        if (errorStatus === 404) {
+          // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
+          const rawApiKey = getEnv("VENICE_API_KEY");
+          const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
           const fullUrl = `${this.openai.baseURL}/chat/completions`;
           
           // #region agent log
@@ -247,8 +258,10 @@ Return ONLY valid JSON, no markdown formatting.`;
             location: "lib/services/ai-component-detector.ts:detectComponents:directHttp",
             url: fullUrl,
             method: "POST",
-            hasApiKey: !!apiKey,
-            apiKeyPrefix: apiKey.substring(0, 15),
+            hasApiKey: !!cleanApiKey,
+            apiKeyLength: cleanApiKey.length,
+            apiKeyPrefix: cleanApiKey.substring(0, 15),
+            rawApiKeyPrefix: rawApiKey.substring(0, 20),
             timestamp: new Date().toISOString(),
             hypothesisId: "K",
           });
@@ -260,7 +273,7 @@ Return ONLY valid JSON, no markdown formatting.`;
               requestPayload,
               {
                 headers: {
-                  "Authorization": `Bearer ${apiKey}`,
+                  "Authorization": `Bearer ${cleanApiKey}`,
                   "Content-Type": "application/json",
                 },
                 timeout: 60000,
