@@ -332,8 +332,73 @@ Return ONLY valid JSON, no markdown formatting.`;
           });
           // #endregion
           
-          // Try direct HTTP request with exact same model to see if it's an SDK issue
+          // First, try to list models to verify API key works at all
+          const modelsUrl = `${this.openai.baseURL}/models`;
           const fullUrl = `${this.openai.baseURL}/chat/completions`;
+          
+          try {
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Testing API key with models endpoint", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401TestModels",
+              url: modelsUrl,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "U",
+            });
+            // #endregion
+            
+            const modelsTestResponse = await axios.get(modelsUrl, {
+              headers: {
+                "Authorization": `Bearer ${cleanApiKey}`,
+                "Content-Type": "application/json",
+              },
+              timeout: 10000,
+              validateStatus: (status) => status < 500,
+            });
+            
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Models endpoint test response", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsTestResponse",
+              status: modelsTestResponse.status,
+              hasData: !!modelsTestResponse.data,
+              dataKeys: modelsTestResponse.data ? Object.keys(modelsTestResponse.data) : [],
+              availableModels: modelsTestResponse.data?.data?.map((m: any) => m.id) || [],
+              responseHeaders: {
+                'cf-ray': modelsTestResponse.headers['cf-ray'],
+                'x-ratelimit-remaining': modelsTestResponse.headers['x-ratelimit-remaining'],
+                'x-venice-balance-usd': modelsTestResponse.headers['x-venice-balance-usd'],
+                'x-venice-balance-diem': modelsTestResponse.headers['x-venice-balance-diem'],
+              },
+              timestamp: new Date().toISOString(),
+              hypothesisId: "U",
+            });
+            // #endregion
+            
+            if (modelsTestResponse.status === 200) {
+              // API key works for models endpoint, so issue is likely model-specific or subscription
+              console.warn("[WARN] ComponentDetector: API key works for models endpoint but fails for chat/completions", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:401ModelOrSubscriptionIssue",
+                requestedModel: this.modelId,
+                availableModels: modelsTestResponse.data?.data?.map((m: any) => m.id) || [],
+                balanceUsd: modelsTestResponse.headers['x-venice-balance-usd'],
+                balanceDiem: modelsTestResponse.headers['x-venice-balance-diem'],
+                timestamp: new Date().toISOString(),
+                hypothesisId: "U",
+              });
+            }
+          } catch (modelsTestError: any) {
+            // #region agent log
+            console.error("[DEBUG] ComponentDetector: Models endpoint test also failed", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsTestError",
+              error: modelsTestError instanceof Error ? modelsTestError.message : String(modelsTestError),
+              status: modelsTestError?.response?.status,
+              responseData: modelsTestError?.response?.data,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "U",
+            });
+            // #endregion
+          }
+          
+          // Try direct HTTP request with exact same model to see if it's an SDK issue
           try {
             // #region agent log
             console.log("[DEBUG] ComponentDetector: Attempting direct HTTP with claude-opus-45", {
