@@ -245,9 +245,30 @@ Return ONLY valid JSON, no markdown formatting.`;
       let errorDetails: any = {
         location: "lib/services/ai-component-detector.ts:detectComponents:error",
         error: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : typeof error,
         timestamp: new Date().toISOString(),
-        hypothesisId: "F",
+        hypothesisId: "I",
       };
+
+      // Log all error properties to see structure
+      if (error && typeof error === 'object') {
+        errorDetails.errorKeys = Object.keys(error);
+        errorDetails.errorProperties = {};
+        for (const key in error) {
+          try {
+            const value = (error as any)[key];
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+              errorDetails.errorProperties[key] = value;
+            } else if (value === null || value === undefined) {
+              errorDetails.errorProperties[key] = value;
+            } else {
+              errorDetails.errorProperties[key] = `[${typeof value}]`;
+            }
+          } catch (e) {
+            errorDetails.errorProperties[key] = '[error accessing]';
+          }
+        }
+      }
 
       // Extract more details from OpenAI SDK errors
       if (error && typeof error === 'object' && 'response' in error) {
@@ -255,28 +276,30 @@ Return ONLY valid JSON, no markdown formatting.`;
         errorDetails.responseStatus = response?.status;
         errorDetails.responseStatusText = response?.statusText;
         errorDetails.responseData = response?.data;
+        errorDetails.responseDataType = typeof response?.data;
         
         // Try to parse response data to get Venice AI's error message
-        if (response?.data) {
+        if (response?.data !== undefined && response?.data !== null) {
           try {
-            const dataStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            errorDetails.responseDataString = dataStr;
-            // Try to parse as JSON if it's a string
             if (typeof response.data === 'string') {
+              errorDetails.responseDataString = response.data;
               try {
                 errorDetails.responseDataParsed = JSON.parse(response.data);
               } catch (e) {
                 errorDetails.responseDataRaw = response.data;
               }
-            } else {
+            } else if (typeof response.data === 'object') {
+              errorDetails.responseDataString = JSON.stringify(response.data);
               errorDetails.responseDataParsed = response.data;
+            } else {
+              errorDetails.responseDataString = String(response.data);
             }
           } catch (e) {
             errorDetails.responseDataParseError = e instanceof Error ? e.message : String(e);
           }
         }
         
-        errorDetails.responseHeaders = response?.headers;
+        errorDetails.responseHeaders = response?.headers ? Object.fromEntries(response.headers.entries()) : null;
       }
       
       // Also check if error has a 'body' property (some SDKs put response data there)
@@ -295,7 +318,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         const request = (error as any).request;
         errorDetails.requestUrl = request?.url;
         errorDetails.requestMethod = request?.method;
-        errorDetails.requestHeaders = request?.headers;
+        errorDetails.requestHeaders = request?.headers ? Object.fromEntries(request.headers.entries()) : null;
       }
 
       // Log model and baseURL for debugging
