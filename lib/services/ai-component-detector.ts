@@ -248,104 +248,206 @@ Return ONLY valid JSON, no markdown formatting.`;
         });
         // #endregion
         
-        // If SDK fails with 404, try direct HTTP to see exact response
+        // If SDK fails with 404, try to list available models first, then try direct HTTP
         if (errorStatus === 404) {
           // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
           const rawApiKey = getEnv("VENICE_API_KEY");
           const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
           const fullUrl = `${this.openai.baseURL}/chat/completions`;
+          const modelsUrl = `${this.openai.baseURL}/models`;
           
-          // #region agent log
-          console.log("[DEBUG] ComponentDetector: Attempting direct HTTP request", {
-            location: "lib/services/ai-component-detector.ts:detectComponents:directHttp",
-            url: fullUrl,
-            method: "POST",
-            hasApiKey: !!cleanApiKey,
-            apiKeyLength: cleanApiKey.length,
-            apiKeyPrefix: cleanApiKey.substring(0, 15),
-            rawApiKeyPrefix: rawApiKey.substring(0, 20),
-            timestamp: new Date().toISOString(),
-            hypothesisId: "K",
-          });
-          // #endregion
-          
+          // First, try to list available models to see what's actually available
           try {
-            // Log the exact request being sent
             // #region agent log
-            console.log("[DEBUG] ComponentDetector: Direct HTTP request details", {
-              location: "lib/services/ai-component-detector.ts:detectComponents:directHttpRequest",
-              url: fullUrl,
-              method: "POST",
+            console.log("[DEBUG] ComponentDetector: Attempting to list available models", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:listModels",
+              url: modelsUrl,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "M",
+            });
+            // #endregion
+            
+            const modelsResponse = await axios.get(modelsUrl, {
               headers: {
-                "Authorization": `Bearer ${cleanApiKey.substring(0, 20)}...`,
+                "Authorization": `Bearer ${cleanApiKey}`,
                 "Content-Type": "application/json",
               },
-              requestPayloadModel: requestPayload.model,
-              requestPayloadKeys: Object.keys(requestPayload),
-              requestPayloadMessagesLength: requestPayload.messages?.length,
-              timestamp: new Date().toISOString(),
-              hypothesisId: "L",
+              timeout: 10000,
+              validateStatus: (status) => status < 500,
             });
-            // #endregion
-            
-            const httpResponse = await axios.post(
-              fullUrl,
-              requestPayload,
-              {
-                headers: {
-                  "Authorization": `Bearer ${cleanApiKey}`,
-                  "Content-Type": "application/json",
-                },
-                timeout: 60000,
-                validateStatus: (status) => status < 500, // Don't throw on 4xx
-              }
-            );
             
             // #region agent log
-            console.log("[DEBUG] ComponentDetector: Direct HTTP response", {
-              location: "lib/services/ai-component-detector.ts:detectComponents:directHttpResponse",
-              status: httpResponse.status,
-              statusText: httpResponse.statusText,
-              headers: httpResponse.headers,
-              dataType: typeof httpResponse.data,
-              dataFull: httpResponse.data,
-              dataPreview: typeof httpResponse.data === 'string' 
-                ? httpResponse.data.substring(0, 500)
-                : JSON.stringify(httpResponse.data).substring(0, 500),
+            console.log("[DEBUG] ComponentDetector: Available models response", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:modelsResponse",
+              status: modelsResponse.status,
+              data: modelsResponse.data,
               timestamp: new Date().toISOString(),
-              hypothesisId: "K",
+              hypothesisId: "M",
             });
             // #endregion
-            
-            if (httpResponse.status === 200 && httpResponse.data) {
-              // Convert axios response to OpenAI SDK format
-              response = {
-                choices: [
-                  {
-                    message: {
-                      content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
-                    },
+          } catch (modelsError: any) {
+            // #region agent log
+            console.warn("[DEBUG] ComponentDetector: Failed to list models (non-critical)", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:modelsError",
+              error: modelsError instanceof Error ? modelsError.message : String(modelsError),
+              status: modelsError?.response?.status,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "M",
+            });
+            // #endregion
+          }
+          
+          // Try alternative model names
+          const alternativeModels = [
+            "claude-opus-4.5",  // With dot
+            "claude-3-opus-20240229",  // Full Claude 3 format
+            "claude-3-5-sonnet-20241022",  // Claude 3.5 format
+            "gpt-4",  // Fallback to GPT-4 if available
+          ];
+          
+          let lastError = sdkError;
+          for (const altModel of alternativeModels) {
+            try {
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Trying alternative model", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:tryAltModel",
+                model: altModel,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "N",
+              });
+              // #endregion
+              
+              const altPayload = { ...requestPayload, model: altModel };
+              const httpResponse = await axios.post(
+                fullUrl,
+                altPayload,
+                {
+                  headers: {
+                    "Authorization": `Bearer ${cleanApiKey}`,
+                    "Content-Type": "application/json",
                   },
-                ],
-              } as any;
-            } else {
-              throw new Error(
-                `Direct HTTP request failed: ${httpResponse.status} ${httpResponse.statusText}. Response: ${JSON.stringify(httpResponse.data)}`
+                  timeout: 60000,
+                  validateStatus: (status) => status < 500,
+                }
               );
+              
+              if (httpResponse.status === 200 && httpResponse.data) {
+                // #region agent log
+                console.log("[DEBUG] ComponentDetector: Alternative model worked!", {
+                  location: "lib/services/ai-component-detector.ts:detectComponents:altModelSuccess",
+                  model: altModel,
+                  timestamp: new Date().toISOString(),
+                  hypothesisId: "N",
+                });
+                // #endregion
+                
+                // Convert axios response to OpenAI SDK format
+                response = {
+                  choices: [
+                    {
+                      message: {
+                        content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                      },
+                    },
+                  ],
+                } as any;
+                break; // Success! Exit the loop
+              } else {
+                // #region agent log
+                console.log("[DEBUG] ComponentDetector: Alternative model also failed", {
+                  location: "lib/services/ai-component-detector.ts:detectComponents:altModelFailed",
+                  model: altModel,
+                  status: httpResponse.status,
+                  response: httpResponse.data,
+                  timestamp: new Date().toISOString(),
+                  hypothesisId: "N",
+                });
+                // #endregion
+              }
+            } catch (altError: any) {
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Alternative model error", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:altModelError",
+                model: altModel,
+                error: altError instanceof Error ? altError.message : String(altError),
+                status: altError?.response?.status,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "N",
+              });
+              // #endregion
+              lastError = altError;
             }
-          } catch (httpError: any) {
-            // #region agent log
-            console.error("[DEBUG] ComponentDetector: Direct HTTP request also failed", {
-              location: "lib/services/ai-component-detector.ts:detectComponents:directHttpError",
-              error: httpError instanceof Error ? httpError.message : String(httpError),
-              status: httpError?.response?.status,
-              statusText: httpError?.response?.statusText,
-              responseData: httpError?.response?.data,
-              timestamp: new Date().toISOString(),
-              hypothesisId: "K",
-            });
-            // #endregion
-            throw sdkError; // Re-throw original SDK error
+          }
+          
+          // If we got a response from an alternative model, use it
+          if (response) {
+            // Success - response is already set
+          } else {
+            // All models failed, try original with direct HTTP for final logging
+            try {
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Attempting direct HTTP with original model", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:directHttp",
+                url: fullUrl,
+                method: "POST",
+                model: this.modelId,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "K",
+              });
+              // #endregion
+              
+              const httpResponse = await axios.post(
+                fullUrl,
+                requestPayload,
+                {
+                  headers: {
+                    "Authorization": `Bearer ${cleanApiKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  timeout: 60000,
+                  validateStatus: (status) => status < 500,
+                }
+              );
+              
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Direct HTTP response", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:directHttpResponse",
+                status: httpResponse.status,
+                statusText: httpResponse.statusText,
+                dataFull: httpResponse.data,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "K",
+              });
+              // #endregion
+              
+              if (httpResponse.status === 200 && httpResponse.data) {
+                response = {
+                  choices: [
+                    {
+                      message: {
+                        content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                      },
+                    },
+                  ],
+                } as any;
+              }
+            } catch (httpError: any) {
+              // #region agent log
+              console.error("[DEBUG] ComponentDetector: Direct HTTP request also failed", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:directHttpError",
+                error: httpError instanceof Error ? httpError.message : String(httpError),
+                status: httpError?.response?.status,
+                responseData: httpError?.response?.data,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "K",
+              });
+              // #endregion
+            }
+            
+            // If we still don't have a response, throw the original error
+            if (!response) {
+              throw sdkError;
+            }
           }
         } else {
           throw sdkError; // Re-throw if not 404
