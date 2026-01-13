@@ -148,58 +148,33 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
       message: `Scraped ${scrapeResult.title}`,
     });
 
-    // Step 2: Component Detection (~23s)
+    // Step 2 & 3: Component Detection and Content Modeling (combined in single AI call)
+    // This saves ~20 seconds by eliminating one AI API call
     jobStore.updateJob(jobId, {
       progress: 30,
       stage: 'components',
-      message: 'Detecting components...',
+      message: 'Detecting components and extracting models...',
     });
 
     // #region agent log
-    console.log("[DEBUG] Analyze API: Step 2 - Component Detection", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:components",
+    console.log("[DEBUG] Analyze API: Step 2 & 3 - Combined Component Detection & Content Modeling", {
+      location: "app/api/analyze/route.ts:analyzeInBackground:componentsAndModels",
       jobId,
       timestamp: new Date().toISOString(),
       hypothesisId: "E",
     });
     // #endregion
 
-    const components = await analyzer.componentDetector.detectComponents(
+    // Use combined method to get both components and models in one AI call
+    const { components, models } = await analyzer.componentDetector.detectComponentsAndModels(
       scrapeResult.html,
       scrapeResult.screenshotPath
     );
 
     jobStore.updateJob(jobId, {
-      progress: 50,
-      stage: 'components',
-      message: `Found ${components.length} components`,
-    });
-
-    // Step 3: Content Modeling (~20s)
-    jobStore.updateJob(jobId, {
       progress: 60,
-      stage: 'models',
-      message: 'Extracting content models...',
-    });
-
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Step 3 - Content Modeling", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:models",
-      jobId,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
-
-    const models = await analyzer.contentModeler.extractContentModels(
-      scrapeResult.html,
-      components
-    );
-
-    jobStore.updateJob(jobId, {
-      progress: 75,
-      stage: 'models',
-      message: `Extracted ${models.length} content models`,
+      stage: 'components',
+      message: `Found ${components.length} components and ${models.length} content models`,
     });
 
     // Step 4: Mapping (~30s)

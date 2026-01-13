@@ -28,53 +28,33 @@ export class ContentModeler {
     html: string,
     components: UIComponent[]
   ): Promise<ContentModel[]> {
-    const prompt = `**Stage 2: Content Modeling**
+    const prompt = `Extract semantic content models from this HTML and components.
 
-You are analyzing a webpage to extract semantic content models that represent the data structure.
-
-HTML Structure:
+HTML:
 \`\`\`html
 ${html.substring(0, 50000)}
 \`\`\`
 
-Detected Components:
+Components:
 ${JSON.stringify(components, null, 2)}
 
-From the HTML and components, extract semantic content models. A content model represents the data structure that would populate these components.
+Extract content models (data structures) that populate these components.
 
-Examples:
-- Event model: {title: string, stats: array, speakers: array}
-- Product model: {name: string, price: number, images: array}
-- Article model: {title: string, content: string, author: string, date: string}
+For each model, provide:
+- name: Model name (PascalCase, singular)
+- fields: Array of {name, type, description}
+- description: Brief description
 
-For each model, identify:
-1. Model name (singular, PascalCase)
-2. Fields with types (string, number, boolean, array, object, image, url)
-3. Field descriptions
+Types: string, number, boolean, array, object, image, url
 
-Output a JSON array with this exact structure:
-[
-  {
-    "name": "Event",
-    "fields": [
-      {"name": "title", "type": "string", "description": "Event title"},
-      {"name": "stats", "type": "array", "description": "Array of statistics"},
-      {"name": "speakers", "type": "array", "description": "Array of speaker objects"}
-    ],
-    "description": "Main event data model"
-  }
-]
+Output JSON array:
+[{"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}]
 
-Focus on:
-- Models that represent the main content entities
-- Fields that map to component slots
-- Arrays for repeating content (speakers, stats, items)
-
-Return ONLY valid JSON, no markdown formatting.`;
+Focus on main content entities and fields mapping to component slots. Return ONLY valid JSON.`;
 
     const response = await this.openai.chat.completions.create({
       model: this.modelId,
-      max_tokens: 4000,
+      max_tokens: 2500, // Reduced from 4000 for faster responses
       messages: [
         {
           role: "user",
