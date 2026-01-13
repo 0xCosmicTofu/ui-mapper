@@ -12,7 +12,26 @@ export class ComponentDetector {
   constructor() {
     const rawVeniceKey = getEnv("VENICE_API_KEY");
     // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
-    const veniceKey = rawVeniceKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
+    // Also remove any trailing newlines, carriage returns, or whitespace
+    let veniceKey = rawVeniceKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
+    // Remove trailing newlines and carriage returns (common in Vercel env vars)
+    veniceKey = veniceKey.replace(/[\n\r]+$/, "").trim();
+    
+    // #region agent log
+    console.log("[DEBUG] ComponentDetector: API key cleaning", {
+      location: "lib/services/ai-component-detector.ts:constructor:apiKeyClean",
+      rawKeyLength: rawVeniceKey.length,
+      cleanedKeyLength: veniceKey.length,
+      rawKeyPrefix: rawVeniceKey.substring(0, 20),
+      cleanedKeyPrefix: veniceKey.substring(0, 20),
+      rawKeyLastChars: rawVeniceKey.split('').slice(-5).map(c => c.charCodeAt(0)),
+      cleanedKeyLastChars: veniceKey.split('').slice(-5).map(c => c.charCodeAt(0)),
+      hasTrailingNewline: rawVeniceKey.endsWith('\n') || rawVeniceKey.endsWith('\r'),
+      timestamp: new Date().toISOString(),
+      hypothesisId: "R",
+    });
+    // #endregion
+    
     if (!veniceKey) {
       throw new Error("VENICE_API_KEY is required");
     }
