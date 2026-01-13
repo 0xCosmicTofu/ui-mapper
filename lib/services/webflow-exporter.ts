@@ -83,28 +83,84 @@ export class WebflowExporter {
             });
             // #endregion
             
-            // Validate modelPath is a string
-            if (typeof modelPath !== "string") {
-              console.warn("[WARN] WebflowExporter: modelPath is not a string, skipping", {
-                location: "lib/services/webflow-exporter.ts:exportToWebflow:invalidModelPath",
+            // Handle different types of modelPath
+            if (typeof modelPath === "string") {
+              // Handle string paths normally
+              const [modelName, ...fieldPath] = modelPath.split(".");
+              const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, ""); // Remove array indices
+              
+              const collection = collections.find((c) => c.name === modelName);
+              if (collection) {
+                const field = collection.fields.find((f) => f.name === fieldName);
+                if (field) {
+                  bindings[slotName] = `${collection.slug}.${field.slug}`;
+                }
+              }
+            } else if (modelPath === null || modelPath === undefined) {
+              // Null/undefined means static/unmapped slot - this is expected, log at debug level
+              // #region agent log
+              console.log("[DEBUG] WebflowExporter: Slot is static/unmapped (expected)", {
+                location: "lib/services/webflow-exporter.ts:exportToWebflow:staticSlot",
                 slotName,
-                modelPath,
-                modelPathType: typeof modelPath,
                 timestamp: new Date().toISOString(),
                 hypothesisId: "V",
               });
-              return; // Skip this mapping
-            }
-            
-            // Extract model and field from path (e.g., "Event.title" -> "Event", "title")
-            const [modelName, ...fieldPath] = modelPath.split(".");
-            const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, ""); // Remove array indices
-            
-            const collection = collections.find((c) => c.name === modelName);
-            if (collection) {
-              const field = collection.fields.find((f) => f.name === fieldName);
-              if (field) {
-                bindings[slotName] = `${collection.slug}.${field.slug}`;
+              // #endregion
+              // Don't create binding for static slots
+            } else if (typeof modelPath === "object" && modelPath !== null) {
+              // Handle complex objects - extract primary field
+              const obj = modelPath as Record<string, unknown>;
+              
+              // Try to find a primary field (prefer label, then src, then first string value)
+              let primaryPath: string | null = null;
+              
+              if (typeof obj.label === "string") {
+                primaryPath = obj.label;
+              } else if (typeof obj.src === "string") {
+                primaryPath = obj.src;
+              } else {
+                // Find first string value
+                for (const [key, value] of Object.entries(obj)) {
+                  if (typeof value === "string") {
+                    primaryPath = value;
+                    break;
+                  }
+                }
+              }
+              
+              if (primaryPath) {
+                // Extract model and field from path
+                const [modelName, ...fieldPath] = primaryPath.split(".");
+                const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, "");
+                
+                const collection = collections.find((c) => c.name === modelName);
+                if (collection) {
+                  const field = collection.fields.find((f) => f.name === fieldName);
+                  if (field) {
+                    bindings[slotName] = `${collection.slug}.${field.slug}`;
+                    
+                    // #region agent log
+                    console.log("[DEBUG] WebflowExporter: Extracted primary field from complex object", {
+                      location: "lib/services/webflow-exporter.ts:exportToWebflow:complexObject",
+                      slotName,
+                      primaryPath,
+                      extractedField: fieldName,
+                      timestamp: new Date().toISOString(),
+                      hypothesisId: "V",
+                    });
+                    // #endregion
+                  }
+                }
+              } else {
+                // #region agent log
+                console.log("[DEBUG] WebflowExporter: Complex object has no string fields to extract", {
+                  location: "lib/services/webflow-exporter.ts:exportToWebflow:complexObjectNoString",
+                  slotName,
+                  objectKeys: Object.keys(obj),
+                  timestamp: new Date().toISOString(),
+                  hypothesisId: "V",
+                });
+                // #endregion
               }
             }
           }
@@ -168,33 +224,47 @@ export class WebflowExporter {
     const collectionCounts: Record<string, number> = {};
     
     Object.values(componentMapping.slotMappings).forEach((path) => {
-      // #region agent log
-      console.log("[DEBUG] WebflowExporter: Processing path in findPrimaryCollection", {
-        location: "lib/services/webflow-exporter.ts:findPrimaryCollectionForComponent:path",
-        path,
-        pathType: typeof path,
-        pathIsString: typeof path === "string",
-        timestamp: new Date().toISOString(),
-        hypothesisId: "V",
-      });
-      // #endregion
+      let pathToProcess: string | null = null;
       
-      // Validate path is a string
-      if (typeof path !== "string") {
-        console.warn("[WARN] WebflowExporter: path is not a string, skipping", {
-          location: "lib/services/webflow-exporter.ts:findPrimaryCollectionForComponent:invalidPath",
-          path,
-          pathType: typeof path,
+      if (typeof path === "string") {
+        pathToProcess = path;
+      } else if (path === null || path === undefined) {
+        // Skip null/undefined - these are static slots (expected)
+        return;
+      } else if (typeof path === "object") {
+        // Extract primary field from complex objects
+        const obj = path as Record<string, unknown>;
+        if (typeof obj.label === "string") {
+          pathToProcess = obj.label;
+        } else if (typeof obj.src === "string") {
+          pathToProcess = obj.src;
+        } else {
+          // Find first string value
+          for (const value of Object.values(obj)) {
+            if (typeof value === "string") {
+              pathToProcess = value;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (pathToProcess) {
+        // #region agent log
+        console.log("[DEBUG] WebflowExporter: Processing path in findPrimaryCollection", {
+          location: "lib/services/webflow-exporter.ts:findPrimaryCollectionForComponent:path",
+          path: pathToProcess,
+          originalPathType: typeof path,
           timestamp: new Date().toISOString(),
           hypothesisId: "V",
         });
-        return; // Skip this path
-      }
-      
-      const [modelName] = path.split(".");
-      const collection = collections.find((c) => c.name === modelName);
-      if (collection) {
-        collectionCounts[collection.slug] = (collectionCounts[collection.slug] || 0) + 1;
+        // #endregion
+        
+        const [modelName] = pathToProcess.split(".");
+        const collection = collections.find((c) => c.name === modelName);
+        if (collection) {
+          collectionCounts[collection.slug] = (collectionCounts[collection.slug] || 0) + 1;
+        }
       }
     });
 
