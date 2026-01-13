@@ -15,9 +15,13 @@ export class ComponentDetector {
     }
 
     // Venice AI provides OpenAI-compatible API
+    // Try alternative baseURL formats if default doesn't work
+    const baseURL = getEnv("VENICE_API_BASE_URL", "https://api.venice.ai/v1");
     this.openai = new OpenAI({
       apiKey: veniceKey,
-      baseURL: "https://api.venice.ai/v1",
+      baseURL: baseURL,
+      // Add timeout to help diagnose connection issues
+      timeout: 60000,
     });
 
     // Use Venice model ID or default to claude-opus-45
