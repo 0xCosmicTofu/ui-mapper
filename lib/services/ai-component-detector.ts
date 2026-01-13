@@ -367,7 +367,7 @@ Return ONLY valid JSON, no markdown formatting.`;
                 'x-ratelimit-remaining': modelsTestResponse.headers['x-ratelimit-remaining'],
                 'x-venice-balance-usd': modelsTestResponse.headers['x-venice-balance-usd'],
                 'x-venice-balance-diem': modelsTestResponse.headers['x-venice-balance-diem'],
-              },
+                },
               timestamp: new Date().toISOString(),
               hypothesisId: "U",
             });
@@ -470,7 +470,7 @@ Return ONLY valid JSON, no markdown formatting.`;
                 'x-ratelimit-remaining': httpResponse.headers['x-ratelimit-remaining'],
                 'x-venice-balance-usd': httpResponse.headers['x-venice-balance-usd'],
                 'x-venice-balance-diem': httpResponse.headers['x-venice-balance-diem'],
-              },
+          },
               dataPreview: JSON.stringify(httpResponse.data).substring(0, 500),
               timestamp: new Date().toISOString(),
               hypothesisId: "S",
@@ -485,7 +485,7 @@ Return ONLY valid JSON, no markdown formatting.`;
                 cfRay: httpResponse.headers['cf-ray'],
                 timestamp: new Date().toISOString(),
                 hypothesisId: "S",
-              });
+      });
               // #endregion
               
               // Convert axios response to OpenAI SDK format
@@ -876,7 +876,7 @@ Return ONLY valid JSON, no markdown formatting.`;
           }
         }
       }
-
+      
       // Extract more details from OpenAI SDK errors
       if (error && typeof error === 'object' && 'response' in error) {
         const response = (error as any).response;

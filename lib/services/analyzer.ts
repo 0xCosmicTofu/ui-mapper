@@ -6,11 +6,11 @@ import { WebflowExporter } from "./webflow-exporter";
 import type { AnalysisResult, WebflowExport } from "../types";
 
 export class SiteAnalyzer {
-  private scraper: WebScraper;
-  private componentDetector: ComponentDetector;
-  private contentModeler: ContentModeler;
-  private mappingService: MappingService;
-  private webflowExporter: WebflowExporter;
+  public scraper: WebScraper;
+  public componentDetector: ComponentDetector;
+  public contentModeler: ContentModeler;
+  public mappingService: MappingService;
+  public webflowExporter: WebflowExporter;
 
   constructor() {
     this.scraper = new WebScraper();
