@@ -270,6 +270,24 @@ Return ONLY valid JSON, no markdown formatting.`;
           // #endregion
           
           try {
+            // Log the exact request being sent
+            // #region agent log
+            console.log("[DEBUG] ComponentDetector: Direct HTTP request details", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:directHttpRequest",
+              url: fullUrl,
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${cleanApiKey.substring(0, 20)}...`,
+                "Content-Type": "application/json",
+              },
+              requestPayloadModel: requestPayload.model,
+              requestPayloadKeys: Object.keys(requestPayload),
+              requestPayloadMessagesLength: requestPayload.messages?.length,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "L",
+            });
+            // #endregion
+            
             const httpResponse = await axios.post(
               fullUrl,
               requestPayload,
@@ -290,6 +308,7 @@ Return ONLY valid JSON, no markdown formatting.`;
               statusText: httpResponse.statusText,
               headers: httpResponse.headers,
               dataType: typeof httpResponse.data,
+              dataFull: httpResponse.data,
               dataPreview: typeof httpResponse.data === 'string' 
                 ? httpResponse.data.substring(0, 500)
                 : JSON.stringify(httpResponse.data).substring(0, 500),
