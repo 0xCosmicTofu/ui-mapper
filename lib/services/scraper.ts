@@ -24,10 +24,10 @@ export class WebScraper {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
         timeout: 30000,
-        maxRedirects: 5,
+        // maxRedirects is handled automatically by axios
       });
 
-      const html = response.data;
+      const html = response.data as string;
       
       // Extract title from HTML
       const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
