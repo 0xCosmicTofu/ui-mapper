@@ -7,9 +7,11 @@ import { jobStore } from "@/lib/services/job-store";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> | { jobId: string } }
 ) {
-  const { jobId } = params;
+  // Handle both sync and async params (Next.js 15+ uses async params)
+  const resolvedParams = params instanceof Promise ? await params : params;
+  const { jobId } = resolvedParams;
 
   const job = jobStore.getJob(jobId);
 
