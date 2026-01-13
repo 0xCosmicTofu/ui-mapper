@@ -277,6 +277,25 @@ Return ONLY valid JSON, no markdown formatting.`;
 
       // Try OpenAI SDK first, but also prepare for direct HTTP fallback if needed
       let response;
+      
+      // #region agent log
+      // Log the exact API key that will be used by OpenAI SDK
+      const rawApiKey = getEnv("VENICE_API_KEY");
+      const cleanApiKey = rawApiKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
+      console.log("[DEBUG] ComponentDetector: About to make OpenAI SDK request", {
+        location: "lib/services/ai-component-detector.ts:detectComponents:preRequest",
+        model: this.modelId,
+        baseURL: this.openai.baseURL,
+        apiKeyLength: cleanApiKey.length,
+        apiKeyPrefix: cleanApiKey.substring(0, 20),
+        apiKeySuffix: cleanApiKey.substring(cleanApiKey.length - 10),
+        apiKeyFormat: cleanApiKey.startsWith("VENICE-") ? "VENICE- prefix" : cleanApiKey.startsWith("sk-") ? "sk- prefix" : "other",
+        expectedAuthHeader: `Bearer ${cleanApiKey.substring(0, 20)}...`,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "S",
+      });
+      // #endregion
+      
       try {
         response = await this.openai.chat.completions.create(requestPayload);
       } catch (sdkError: any) {
@@ -297,7 +316,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         });
         // #endregion
         
-        // Handle 401 authentication errors - try to list models to verify API key
+        // Handle 401 authentication errors - try direct HTTP with exact same model
         if (errorStatus === 401) {
           // #region agent log
           const rawApiKey = getEnv("VENICE_API_KEY");
@@ -307,143 +326,104 @@ Return ONLY valid JSON, no markdown formatting.`;
             errorStatus,
             apiKeyLength: cleanApiKey.length,
             apiKeyPrefix: cleanApiKey.substring(0, 20),
+            apiKeySuffix: cleanApiKey.substring(cleanApiKey.length - 10),
             apiKeyFormat: cleanApiKey.startsWith("VENICE-") ? "VENICE- prefix" : cleanApiKey.startsWith("sk-") ? "sk- prefix" : "other",
             hasTrailingNewline: cleanApiKey.endsWith('\n') || cleanApiKey.endsWith('\r'),
             apiKeyCharCodes: cleanApiKey.split('').map(c => c.charCodeAt(0)).slice(-5), // Last 5 chars
             apiKeyJSON: JSON.stringify(cleanApiKey.substring(0, 30)), // First 30 chars as JSON to show hidden chars
             baseURL: this.openai.baseURL,
+            model: this.modelId,
             timestamp: new Date().toISOString(),
             hypothesisId: "Q",
           });
           // #endregion
           
-          // Try to list models to verify if API key works at all
-          const modelsUrl = `${this.openai.baseURL}/models`;
+          // Try direct HTTP request with exact same model to see if it's an SDK issue
           const fullUrl = `${this.openai.baseURL}/chat/completions`;
           try {
             // #region agent log
-            console.log("[DEBUG] ComponentDetector: Attempting to list models to verify API key", {
-              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsTest",
-              url: modelsUrl,
+            console.log("[DEBUG] ComponentDetector: Attempting direct HTTP with claude-opus-45", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttp",
+              url: fullUrl,
+              model: this.modelId,
+              authHeaderFormat: `Bearer ${cleanApiKey.substring(0, 20)}...`,
               timestamp: new Date().toISOString(),
-              hypothesisId: "Q",
+              hypothesisId: "S",
             });
             // #endregion
             
-            const modelsResponse = await axios.get(modelsUrl, {
-              headers: {
-                "Authorization": `Bearer ${cleanApiKey}`,
-                "Content-Type": "application/json",
-              },
-              timeout: 10000,
-              validateStatus: (status) => status < 500,
-            });
-            
-            // #region agent log
-            console.log("[DEBUG] ComponentDetector: Models list response (401 test)", {
-              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsResponse",
-              status: modelsResponse.status,
-              data: modelsResponse.data,
-              timestamp: new Date().toISOString(),
-              hypothesisId: "Q",
-            });
-            // #endregion
-            
-            // If models list works, the API key is valid but model might not exist
-            if (modelsResponse.status === 200) {
-              const availableModels = modelsResponse.data?.data?.map((m: any) => m.id) || [];
-              console.warn("[WARN] ComponentDetector: API key is valid but model may not exist", {
-                location: "lib/services/ai-component-detector.ts:detectComponents:401ModelIssue",
-                requestedModel: this.modelId,
-                availableModels: availableModels,
-                timestamp: new Date().toISOString(),
-                hypothesisId: "Q",
-              });
-              
-              // Try alternative models if the requested model doesn't exist
-              const alternativeModels = [
-                "claude-opus-4.5",  // With dot
-                "claude-3-opus-20240229",  // Full Claude 3 format
-                "claude-3-5-sonnet-20241022",  // Claude 3.5 format
-                "gpt-4",  // Fallback to GPT-4 if available
-                ...availableModels.slice(0, 3),  // Try first 3 available models
-              ];
-              
-              for (const altModel of alternativeModels) {
-                try {
-                  // #region agent log
-                  console.log("[DEBUG] ComponentDetector: Trying alternative model (401 handler)", {
-                    location: "lib/services/ai-component-detector.ts:detectComponents:401TryAltModel",
-                    model: altModel,
-                    timestamp: new Date().toISOString(),
-                    hypothesisId: "Q",
-                  });
-                  // #endregion
-                  
-                  const altPayload = { ...requestPayload, model: altModel };
-                  const httpResponse = await axios.post(
-                    fullUrl,
-                    altPayload,
-                    {
-                      headers: {
-                        "Authorization": `Bearer ${cleanApiKey}`,
-                        "Content-Type": "application/json",
-                      },
-                      timeout: 60000,
-                      validateStatus: (status) => status < 500,
-                    }
-                  );
-                  
-                  if (httpResponse.status === 200 && httpResponse.data) {
-                    // #region agent log
-                    console.log("[DEBUG] ComponentDetector: Alternative model worked (401 handler)!", {
-                      location: "lib/services/ai-component-detector.ts:detectComponents:401AltModelSuccess",
-                      model: altModel,
-                      timestamp: new Date().toISOString(),
-                      hypothesisId: "Q",
-                    });
-                    // #endregion
-                    
-                    // Convert axios response to OpenAI SDK format
-                    response = {
-                      choices: [
-                        {
-                          message: {
-                            content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
-                          },
-                        },
-                      ],
-                    } as any;
-                    break; // Success! Exit the loop
-                  }
-                } catch (altError: any) {
-                  // #region agent log
-                  console.log("[DEBUG] ComponentDetector: Alternative model error (401 handler)", {
-                    location: "lib/services/ai-component-detector.ts:detectComponents:401AltModelError",
-                    model: altModel,
-                    error: altError instanceof Error ? altError.message : String(altError),
-                    status: altError?.response?.status,
-                    timestamp: new Date().toISOString(),
-                    hypothesisId: "Q",
-                  });
-                  // #endregion
-                }
+            const httpResponse = await axios.post(
+              fullUrl,
+              requestPayload,
+              {
+                headers: {
+                  "Authorization": `Bearer ${cleanApiKey}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: 60000,
+                validateStatus: (status) => status < 500,
               }
-            }
-          } catch (modelsError: any) {
+            );
+            
             // #region agent log
-            console.error("[DEBUG] ComponentDetector: Models list also failed with 401", {
-              location: "lib/services/ai-component-detector.ts:detectComponents:401ModelsError",
-              error: modelsError instanceof Error ? modelsError.message : String(modelsError),
-              status: modelsError?.response?.status,
-              responseData: modelsError?.response?.data,
+            console.log("[DEBUG] ComponentDetector: Direct HTTP response (401 handler)", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpResponse",
+              status: httpResponse.status,
+              statusText: httpResponse.statusText,
+              responseHeaders: httpResponse.headers,
+              dataPreview: JSON.stringify(httpResponse.data).substring(0, 500),
               timestamp: new Date().toISOString(),
-              hypothesisId: "Q",
+              hypothesisId: "S",
+            });
+            // #endregion
+            
+            if (httpResponse.status === 200 && httpResponse.data) {
+              // #region agent log
+              console.log("[DEBUG] ComponentDetector: Direct HTTP succeeded with claude-opus-45!", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpSuccess",
+                model: this.modelId,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "S",
+              });
+              // #endregion
+              
+              // Convert axios response to OpenAI SDK format
+              response = {
+                choices: [
+                  {
+                    message: {
+                      content: httpResponse.data.choices?.[0]?.message?.content || JSON.stringify(httpResponse.data),
+                    },
+                  },
+                ],
+              } as any;
+            } else {
+              // #region agent log
+              console.error("[DEBUG] ComponentDetector: Direct HTTP also returned non-200", {
+                location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpNon200",
+                status: httpResponse.status,
+                data: httpResponse.data,
+                timestamp: new Date().toISOString(),
+                hypothesisId: "S",
+              });
+              // #endregion
+            }
+          } catch (httpError: any) {
+            // #region agent log
+            console.error("[DEBUG] ComponentDetector: Direct HTTP request failed (401 handler)", {
+              location: "lib/services/ai-component-detector.ts:detectComponents:401DirectHttpError",
+              error: httpError instanceof Error ? httpError.message : String(httpError),
+              status: httpError?.response?.status,
+              statusText: httpError?.response?.statusText,
+              responseData: httpError?.response?.data,
+              responseHeaders: httpError?.response?.headers,
+              timestamp: new Date().toISOString(),
+              hypothesisId: "S",
             });
             // #endregion
           }
           
-          // If we got a response from an alternative model, use it; otherwise throw the original error
+          // If we got a response from direct HTTP, use it; otherwise throw the original error
           if (!response) {
             throw sdkError;
           }
