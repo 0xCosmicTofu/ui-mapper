@@ -812,8 +812,29 @@ Return ONLY valid JSON, no markdown formatting.`;
 
       // Parse JSON response
       const jsonText = content.trim();
-      // Remove markdown code blocks if present
-      const cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+      // Extract JSON from markdown code blocks (improved extraction)
+      let cleanedJson = jsonText;
+
+      // Try to extract content between ```json and ``` markers
+      const codeBlockMatch = jsonText.match(/```json\s*([\s\S]*?)```/);
+      if (codeBlockMatch && codeBlockMatch[1]) {
+        cleanedJson = codeBlockMatch[1].trim();
+      } else {
+        // Fallback: remove markdown code block markers if present
+        cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        
+        // If there's still extra content after the JSON, try to extract just the JSON
+        // Find the first complete JSON array or object
+        const jsonArrayMatch = cleanedJson.match(/^(\[[\s\S]*\])/);
+        const jsonObjectMatch = cleanedJson.match(/^(\{[\s\S]*\})/);
+        
+        if (jsonArrayMatch) {
+          cleanedJson = jsonArrayMatch[1];
+        } else if (jsonObjectMatch) {
+          cleanedJson = jsonObjectMatch[1];
+        }
+      }
       
       try {
         const parsed = JSON.parse(cleanedJson);
@@ -836,6 +857,7 @@ Return ONLY valid JSON, no markdown formatting.`;
           location: "lib/services/ai-component-detector.ts:detectComponents:parseError",
           error: parseError instanceof Error ? parseError.message : String(parseError),
           rawResponse: jsonText.substring(0, 500),
+          cleanedJsonPreview: cleanedJson.substring(0, 500),
           timestamp: new Date().toISOString(),
           hypothesisId: "E",
         });
@@ -843,6 +865,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         
         console.error("Failed to parse components JSON:", parseError);
         console.error("Raw response:", jsonText);
+        console.error("Cleaned JSON attempt:", cleanedJson.substring(0, 1000));
         throw new Error(
           `Failed to parse components from AI response. ${parseError instanceof Error ? parseError.message : String(parseError)}`
         );
