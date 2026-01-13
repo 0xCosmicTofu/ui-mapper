@@ -13,6 +13,27 @@ export class WebflowExporter {
     components: UIComponent[],
     mappings: PageMapping[]
   ): WebflowExport {
+    // #region agent log
+    console.log("[DEBUG] WebflowExporter: Starting export", {
+      location: "lib/services/webflow-exporter.ts:exportToWebflow:start",
+      modelsCount: models.length,
+      componentsCount: components.length,
+      mappingsCount: mappings.length,
+      mappingsStructure: mappings.map(m => ({
+        pageName: m.pageName,
+        componentMappingsCount: m.componentMappings?.length || 0,
+        componentMappings: m.componentMappings?.map(cm => ({
+          componentName: cm.componentName,
+          slotMappingsKeys: Object.keys(cm.slotMappings || {}),
+          slotMappingsValues: Object.values(cm.slotMappings || {}),
+          slotMappingsTypes: Object.values(cm.slotMappings || {}).map(v => typeof v),
+        })),
+      })),
+      timestamp: new Date().toISOString(),
+      hypothesisId: "V",
+    });
+    // #endregion
+    
     // Convert content models to Webflow Collections
     const collections: WebflowCollection[] = models.map((model) => ({
       name: model.name,
