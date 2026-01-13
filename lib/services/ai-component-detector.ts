@@ -28,8 +28,14 @@ export class ComponentDetector {
     });
 
     // Use Venice model ID or default to claude-opus-45
+    // getEnv already trims, but let's be extra safe and trim again
     const rawModelId = getEnv("VENICE_MODEL_ID");
-    this.modelId = rawModelId || "claude-opus-45";
+    this.modelId = (rawModelId || "claude-opus-45").trim();
+    
+    // Check for hidden characters (newlines, carriage returns, etc.)
+    const hasNewline = this.modelId.includes('\n');
+    const hasCarriageReturn = this.modelId.includes('\r');
+    const hasWhitespace = /\s/.test(this.modelId);
     
     // #region agent log
     console.log("[DEBUG] ComponentDetector: Constructor initialized", {
@@ -39,6 +45,10 @@ export class ComponentDetector {
       hasModelIdEnvVar: !!rawModelId,
       modelIdLength: this.modelId.length,
       modelIdCharCodes: this.modelId.split('').map(c => c.charCodeAt(0)).slice(0, 20),
+      hasNewline: hasNewline,
+      hasCarriageReturn: hasCarriageReturn,
+      hasWhitespace: hasWhitespace,
+      modelIdJSON: JSON.stringify(this.modelId), // Shows hidden chars
       baseURL: this.openai.baseURL,
       hasApiKey: !!veniceKey,
       apiKeyLength: veniceKey.length,
@@ -47,6 +57,20 @@ export class ComponentDetector {
       hypothesisId: "I",
     });
     // #endregion
+    
+    // Warn if we detect hidden characters
+    if (hasNewline || hasCarriageReturn || hasWhitespace) {
+      console.warn("[WARN] ComponentDetector: Model ID contains whitespace/newlines!", {
+        location: "lib/services/ai-component-detector.ts:constructor:warning",
+        modelId: this.modelId,
+        modelIdJSON: JSON.stringify(this.modelId),
+        hasNewline,
+        hasCarriageReturn,
+        hasWhitespace,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "I",
+      });
+    }
   }
 
   async detectComponents(
