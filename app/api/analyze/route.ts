@@ -340,6 +340,20 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     });
     // #endregion
   } catch (error) {
+    // Calculate total duration even on error
+    const totalDuration = Date.now() - startTime;
+
+    // Log performance metrics for failed analysis
+    console.log("[PERF] Analysis failed", {
+      url,
+      jobId,
+      totalDurationMs: totalDuration,
+      totalDurationSeconds: (totalDuration / 1000).toFixed(2),
+      stageTimings: stageTimings,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    });
+
     // #region agent log
     console.error("[DEBUG] Analyze API: Background analysis error", {
       location: "app/api/analyze/route.ts:analyzeInBackground:error",
