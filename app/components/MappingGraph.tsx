@@ -135,19 +135,6 @@ export function MappingGraph({
               );
 
               if (!edgeExists) {
-                // Calculate offset for multiple edges between same nodes
-                // Count how many edges already exist between these nodes
-                const existingEdgesCount = edges.filter(
-                  (e) => e.source === sourceId && e.target === targetId
-                ).length;
-                
-                // Offset label position vertically for multiple edges to prevent overlap
-                // Use alternating positive/negative offsets to distribute labels above and below the edge
-                const isEven = existingEdgesCount % 2 === 0;
-                const labelYOffset = isEven 
-                  ? (existingEdgesCount / 2) * 30  // Positive offset (below) - increased spacing
-                  : -((existingEdgesCount + 1) / 2) * 30; // Negative offset (above) - increased spacing
-
                 edges.push({
                   id: `${sourceId}-${targetId}-${slot}-${edges.length}`,
                   source: sourceId,
@@ -176,8 +163,6 @@ export function MappingGraph({
                   labelBgPadding: [4, 6],
                   labelBgBorderRadius: 4,
                   labelShowBg: true,
-                  // Offset label vertically to avoid overlap
-                  labelYOffset: labelYOffset,
                 });
               }
             }
