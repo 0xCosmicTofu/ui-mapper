@@ -1134,22 +1134,75 @@ Return ONLY valid JSON.`;
       }
 
       const jsonText = content.trim();
+      
+      // #region agent log
+      console.log("[DEBUG] ComponentDetector: Raw response received", {
+        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:rawResponse",
+        responseLength: jsonText.length,
+        responsePreview: jsonText.substring(0, 200),
+        responseSuffix: jsonText.substring(Math.max(0, jsonText.length - 200)),
+        timestamp: new Date().toISOString(),
+        hypothesisId: "H",
+      });
+      // #endregion
+      
       let cleanedJson = jsonText;
 
       // Extract JSON from markdown code blocks
       const codeBlockMatch = jsonText.match(/```json\s*([\s\S]*?)```/);
       if (codeBlockMatch && codeBlockMatch[1]) {
         cleanedJson = codeBlockMatch[1].trim();
+        // #region agent log
+        console.log("[DEBUG] ComponentDetector: Extracted JSON from code block", {
+          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:extractedFromCodeBlock",
+          cleanedLength: cleanedJson.length,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "H",
+        });
+        // #endregion
       } else {
         cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const jsonObjectMatch = cleanedJson.match(/^(\{[\s\S]*\})/);
         if (jsonObjectMatch) {
           cleanedJson = jsonObjectMatch[1];
+          // #region agent log
+          console.log("[DEBUG] ComponentDetector: Extracted JSON object from text", {
+            location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:extractedObject",
+            cleanedLength: cleanedJson.length,
+            timestamp: new Date().toISOString(),
+            hypothesisId: "H",
+          });
+          // #endregion
         }
-    }
+      }
+
+      // #region agent log
+      console.log("[DEBUG] ComponentDetector: About to parse JSON", {
+        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:beforeParse",
+        cleanedJsonLength: cleanedJson.length,
+        cleanedJsonPreview: cleanedJson.substring(0, 500),
+        cleanedJsonSuffix: cleanedJson.substring(Math.max(0, cleanedJson.length - 500)),
+        timestamp: new Date().toISOString(),
+        hypothesisId: "H",
+      });
+      // #endregion
 
     try {
         const parsed = JSON.parse(cleanedJson);
+        
+        // #region agent log
+        console.log("[DEBUG] ComponentDetector: JSON parsed successfully", {
+          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:parseSuccess",
+          hasComponents: !!parsed.components,
+          hasModels: !!parsed.models,
+          componentsType: Array.isArray(parsed.components) ? 'array' : typeof parsed.components,
+          modelsType: Array.isArray(parsed.models) ? 'array' : typeof parsed.models,
+          componentsLength: Array.isArray(parsed.components) ? parsed.components.length : 0,
+          modelsLength: Array.isArray(parsed.models) ? parsed.models.length : 0,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "H",
+        });
+        // #endregion
         
         // Extract components and models from response
         const components = (parsed.components || []) as UIComponent[];
@@ -1167,8 +1220,27 @@ Return ONLY valid JSON.`;
         
         return { components, models };
     } catch (parseError) {
+        // #region agent log
+        const errorPosition = parseError instanceof SyntaxError && (parseError as any).message?.match(/position (\d+)/);
+        const errorLine = parseError instanceof SyntaxError && (parseError as any).message?.match(/line (\d+)/);
+        console.error("[DEBUG] ComponentDetector: JSON parse error", {
+          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:parseError",
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          errorPosition: errorPosition ? parseInt(errorPosition[1]) : null,
+          errorLine: errorLine ? parseInt(errorLine[1]) : null,
+          cleanedJsonLength: cleanedJson.length,
+          cleanedJsonAroundError: errorPosition ? cleanedJson.substring(Math.max(0, parseInt(errorPosition[1]) - 100), parseInt(errorPosition[1]) + 100) : null,
+          cleanedJsonPreview: cleanedJson.substring(0, 1000),
+          timestamp: new Date().toISOString(),
+          hypothesisId: "H",
+        });
+        // #endregion
+        
         console.error("Failed to parse combined response JSON:", parseError);
         console.error("Raw response:", jsonText);
+        console.error("Cleaned JSON (first 2000 chars):", cleanedJson.substring(0, 2000));
+        console.error("Cleaned JSON (last 2000 chars):", cleanedJson.substring(Math.max(0, cleanedJson.length - 2000)));
+        
       throw new Error(
           `Failed to parse combined response. ${parseError instanceof Error ? parseError.message : String(parseError)}`
       );
