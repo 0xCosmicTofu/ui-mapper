@@ -6,7 +6,6 @@ import ReactFlow, {
   Edge,
   Background,
   Controls,
-  MiniMap,
   ConnectionMode,
   MarkerType,
 } from "reactflow";
@@ -31,8 +30,8 @@ export function MappingGraph({
 
     // Calculate positions
     const modelX = 100;
-    const componentX = 600;
-    const verticalSpacing = 120;
+    const componentX = 700;
+    const verticalSpacing = 180;
     const modelStartY = 50;
     const componentStartY = 50;
 
@@ -136,15 +135,6 @@ export function MappingGraph({
               );
 
               if (!edgeExists) {
-                // Calculate offset for multiple edges between same nodes
-                // Count how many edges already exist between these nodes
-                const existingEdgesCount = edges.filter(
-                  (e) => e.source === sourceId && e.target === targetId
-                ).length;
-                
-                // Offset label position for multiple edges to prevent overlap
-                const labelOffset = existingEdgesCount * 15;
-
                 edges.push({
                   id: `${sourceId}-${targetId}-${slot}-${edges.length}`,
                   source: sourceId,
@@ -173,10 +163,6 @@ export function MappingGraph({
                   labelBgPadding: [4, 6],
                   labelBgBorderRadius: 4,
                   labelShowBg: true,
-                  // Offset label to avoid overlap with other edges
-                  ...(labelOffset > 0 && {
-                    labelOffset: labelOffset,
-                  }),
                 });
               }
             }
@@ -220,14 +206,6 @@ export function MappingGraph({
         />
         <Controls 
           className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg" 
-        />
-        <MiniMap
-          nodeColor={(node) => {
-            if (node.id.startsWith("model-")) return "#3b82f6";
-            return "#8b5cf6";
-          }}
-          maskColor="rgba(0, 0, 0, 0.1)"
-          className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg"
         />
       </ReactFlow>
     </div>

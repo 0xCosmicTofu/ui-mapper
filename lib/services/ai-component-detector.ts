@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { UIComponent } from "../types";
+import type { UIComponent, ContentModel } from "../types";
 import { getEnv } from "../utils/env";
 import axios from "axios";
 
@@ -11,29 +11,21 @@ export class ComponentDetector {
 
   constructor() {
     const rawVeniceKey = getEnv("VENICE_API_KEY");
+    
     // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
     // Also remove any trailing newlines, carriage returns, or whitespace
     let veniceKey = rawVeniceKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
     // Remove trailing newlines and carriage returns (common in Vercel env vars)
     veniceKey = veniceKey.replace(/[\n\r]+$/, "").trim();
     
-    // #region agent log
-    console.log("[DEBUG] ComponentDetector: API key cleaning", {
-      location: "lib/services/ai-component-detector.ts:constructor:apiKeyClean",
-      rawKeyLength: rawVeniceKey.length,
-      cleanedKeyLength: veniceKey.length,
-      rawKeyPrefix: rawVeniceKey.substring(0, 20),
-      cleanedKeyPrefix: veniceKey.substring(0, 20),
-      rawKeyLastChars: rawVeniceKey.split('').slice(-5).map(c => c.charCodeAt(0)),
-      cleanedKeyLastChars: veniceKey.split('').slice(-5).map(c => c.charCodeAt(0)),
-      hasTrailingNewline: rawVeniceKey.endsWith('\n') || rawVeniceKey.endsWith('\r'),
-      timestamp: new Date().toISOString(),
-      hypothesisId: "R",
-    });
-    // #endregion
     
     if (!veniceKey) {
-      throw new Error("VENICE_API_KEY is required");
+      // Provide helpful error message
+      const errorMessage = process.env.VENICE_API_KEY 
+        ? `VENICE_API_KEY is set but appears to be empty or invalid (length: ${process.env.VENICE_API_KEY.length}). Please check Vercel environment variables.`
+        : `VENICE_API_KEY is not set. Please configure it in Vercel Dashboard → Settings → Environment Variables for ${process.env.VERCEL_ENV || 'preview'} deployments.`;
+      
+      throw new Error(errorMessage);
     }
 
     // Venice AI provides OpenAI-compatible API
@@ -138,78 +130,42 @@ export class ComponentDetector {
 
     // Use Claude Vision for component detection (with or without screenshot)
     const prompt = screenshotBase64
-      ? `**Stage 1: Component Detection**
+      ? `Analyze this webpage HTML and screenshot. Identify 5-10 reusable UI components.
 
-You are analyzing a webpage to identify reusable UI components. 
-
-HTML Structure:
+HTML:
 \`\`\`html
-${html.substring(0, 50000)} // Truncate if too long
+${html.substring(0, 50000)}
 \`\`\`
 
-Analyze the screenshot and HTML to identify 5-10 reusable components. For each component, identify:
-1. Component name (e.g., "HeroBanner", "StatsGrid", "SpeakerCard")
-2. CSS selector that uniquely identifies this component
-3. Slots within the component (text elements, images, links, arrays of items)
+For each component, provide:
+- name: Component name (e.g., "HeroBanner")
+- selector: CSS selector
+- slots: Array of {name, selector, type} for text/images/links
+- variants: Optional array
+- description: Brief description
 
-Output a JSON array with this exact structure:
-[
-  {
-    "name": "HeroBanner",
-    "selector": ".hero-section",
-    "slots": [
-      {"name": "title", "selector": "h1.title", "type": "text"},
-      {"name": "subtitle", "selector": ".subtitle", "type": "text"},
-      {"name": "primary_stat", "selector": ".stat-lead", "type": "text"},
-      {"name": "cta", "selector": ".cta-btn", "type": "link"}
-    ],
-    "variants": ["full", "teaser"],
-    "description": "Main hero banner with title and CTA"
-  }
-]
+Output JSON array:
+[{"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"variants":["full"],"description":"Hero banner"}]
 
-Focus on:
-- Components that appear multiple times or could be reused
-- Components with clear content slots
-- Components that would make sense as Webflow Symbols
+Focus on reusable components with clear slots. Return ONLY valid JSON.`
+      : `Analyze this webpage HTML. Identify 5-10 reusable UI components.
 
-Return ONLY valid JSON, no markdown formatting.`
-      : `**Stage 1: Component Detection**
-
-You are analyzing a webpage to identify reusable UI components. 
-
-HTML Structure:
+HTML:
 \`\`\`html
-${html.substring(0, 50000)} // Truncate if too long
+${html.substring(0, 50000)}
 \`\`\`
 
-Analyze the HTML structure to identify 5-10 reusable components. For each component, identify:
-1. Component name (e.g., "HeroBanner", "StatsGrid", "SpeakerCard")
-2. CSS selector that uniquely identifies this component
-3. Slots within the component (text elements, images, links, arrays of items)
+For each component, provide:
+- name: Component name (e.g., "HeroBanner")
+- selector: CSS selector
+- slots: Array of {name, selector, type} for text/images/links
+- variants: Optional array
+- description: Brief description
 
-Output a JSON array with this exact structure:
-[
-  {
-    "name": "HeroBanner",
-    "selector": ".hero-section",
-    "slots": [
-      {"name": "title", "selector": "h1.title", "type": "text"},
-      {"name": "subtitle", "selector": ".subtitle", "type": "text"},
-      {"name": "primary_stat", "selector": ".stat-lead", "type": "text"},
-      {"name": "cta", "selector": ".cta-btn", "type": "link"}
-    ],
-    "variants": ["full", "teaser"],
-    "description": "Main hero banner with title and CTA"
-  }
-]
+Output JSON array:
+[{"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"variants":["full"],"description":"Hero banner"}]
 
-Focus on:
-- Components that appear multiple times or could be reused
-- Components with clear content slots
-- Components that would make sense as Webflow Symbols
-
-Return ONLY valid JSON, no markdown formatting.`;
+Focus on reusable components with clear slots. Return ONLY valid JSON.`;
 
     try {
       // Venice AI uses OpenAI-compatible API with vision support (if screenshot available)
@@ -237,7 +193,7 @@ Return ONLY valid JSON, no markdown formatting.`;
       // Build the request payload
       const requestPayload = {
         model: this.modelId,
-        max_tokens: 4000,
+        max_tokens: 2500, // Reduced from 4000 for faster responses
         messages: [
           {
             role: "user" as const,
@@ -979,6 +935,135 @@ Return ONLY valid JSON, no markdown formatting.`;
       throw new Error(
         `Component detection failed. ${errorMessage}${statusCode ? ` (${statusCode} ${statusText || ''})` : ''}`
       );
+    }
+  }
+
+  /**
+   * Combined method: Detect components AND extract content models in a single AI call
+   * This saves ~20 seconds by eliminating one AI API call
+   */
+  async detectComponentsAndModels(
+    html: string,
+    screenshotPath: string
+  ): Promise<{ components: UIComponent[]; models: ContentModel[] }> {
+
+    let screenshotBase64: string | null = null;
+    
+    if (screenshotPath) {
+      try {
+        const screenshotFullPath = join(process.cwd(), "public", screenshotPath);
+        const screenshotBuffer = await readFile(screenshotFullPath);
+        screenshotBase64 = screenshotBuffer.toString("base64");
+      } catch (error) {
+        // Screenshot not available, continue without it
+      }
+    }
+
+    // Combined prompt for both component detection and content modeling
+    // Use more explicit JSON format instructions to avoid parsing errors
+    const prompt = screenshotBase64
+      ? `Analyze this webpage HTML and screenshot. Return a valid JSON object with "components" and "models" arrays.
+
+HTML:
+\`\`\`html
+${html.substring(0, 50000)}
+\`\`\`
+
+Return ONLY this JSON structure (no markdown, no extra text, no explanations):
+{"components":[{"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"description":"Hero banner"}],"models":[{"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}]}
+
+Requirements:
+- components: array of reusable UI elements with name, selector, slots array, description
+- models: array of data models with name, fields array, description
+- Return ONLY valid JSON, no markdown code blocks, no explanations`
+      : `Analyze this webpage HTML. Return a valid JSON object with "components" and "models" arrays.
+
+HTML:
+\`\`\`html
+${html.substring(0, 50000)}
+\`\`\`
+
+Return ONLY this JSON structure (no markdown, no extra text, no explanations):
+{"components":[{"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"description":"Hero banner"}],"models":[{"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}]}
+
+Requirements:
+- components: array of reusable UI elements with name, selector, slots array, description
+- models: array of data models with name, fields array, description
+- Return ONLY valid JSON, no markdown code blocks, no explanations`;
+
+    try {
+      const messageContent: Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      > = [
+            {
+              type: "text",
+          text: prompt,
+            },
+      ];
+
+      if (screenshotBase64) {
+        messageContent.push({
+              type: "image_url",
+              image_url: {
+                url: `data:image/png;base64,${screenshotBase64}`,
+              },
+        });
+      }
+
+      const requestPayload = {
+        model: this.modelId,
+        max_tokens: 3000, // Slightly higher for combined response
+        messages: [
+          {
+            role: "user" as const,
+            content: messageContent,
+          },
+        ],
+        response_format: { type: "json_object" as const },
+      };
+
+      const response = await this.openai.chat.completions.create(requestPayload);
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+        throw new Error("No response from Venice AI");
+      }
+
+      const jsonText = content.trim();
+      let cleanedJson = jsonText;
+
+      // Extract JSON from markdown code blocks
+      const codeBlockMatch = jsonText.match(/```json\s*([\s\S]*?)```/);
+      if (codeBlockMatch && codeBlockMatch[1]) {
+        cleanedJson = codeBlockMatch[1].trim();
+      } else {
+        cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        const jsonObjectMatch = cleanedJson.match(/^(\{[\s\S]*\})/);
+        if (jsonObjectMatch) {
+          cleanedJson = jsonObjectMatch[1];
+        }
+    }
+
+    try {
+        const parsed = JSON.parse(cleanedJson);
+        
+        // Extract components and models from response
+        const components = (parsed.components || []) as UIComponent[];
+        const models = (parsed.models || []) as ContentModel[];
+        
+        return { components, models };
+    } catch (parseError) {
+        console.error("Failed to parse combined response JSON:", parseError);
+        console.error("Raw response:", jsonText);
+      throw new Error(
+          `Failed to parse combined response. ${parseError instanceof Error ? parseError.message : String(parseError)}`
+      );
+      }
+    } catch (error) {
+      console.error("Error in combined detection and modeling:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Combined detection and modeling failed. ${errorMessage}`);
     }
   }
 

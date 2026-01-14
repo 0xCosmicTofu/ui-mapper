@@ -9,7 +9,10 @@ export class MappingService {
   constructor() {
     const veniceKey = getEnv("VENICE_API_KEY");
     if (!veniceKey) {
-      throw new Error("VENICE_API_KEY is required");
+      const errorMessage = process.env.VENICE_API_KEY 
+        ? `VENICE_API_KEY is set but appears to be empty or invalid (length: ${process.env.VENICE_API_KEY.length}). Please check Vercel environment variables.`
+        : `VENICE_API_KEY is not set. Please configure it in Vercel Dashboard → Settings → Environment Variables for ${process.env.VERCEL_ENV || 'preview'} deployments.`;
+      throw new Error(errorMessage);
     }
 
     // Venice AI provides OpenAI-compatible API
@@ -29,57 +32,24 @@ export class MappingService {
     components: UIComponent[],
     pageName: string = "Homepage"
   ): Promise<PageMapping[]> {
-    const prompt = `**Stage 3: Explicit Mapping**
+    const prompt = `Create mappings between content models and UI component slots.
 
-You are creating explicit mappings between content models and UI component slots.
-
-Content Models:
+Models:
 ${JSON.stringify(models, null, 2)}
 
-UI Components:
+Components:
 ${JSON.stringify(components, null, 2)}
 
-Create mappings that connect model fields to component slots. For each component used on the page, map its slots to model field paths.
+Map component slots to model field paths using dot notation (e.g., "Event.title", "Event.stats[]").
 
-Mapping format:
-- Component slot → Model field path
-- Use dot notation for nested fields (e.g., "Event.stats[0]")
-- Use array notation for array items (e.g., "Event.speakers[]")
+Output JSON array:
+[{"pageName":"Homepage","componentMappings":[{"componentName":"HeroBanner","slotMappings":{"title":"Event.title"}}]}]
 
-Output a JSON array with this exact structure:
-[
-  {
-    "pageName": "Homepage",
-    "componentMappings": [
-      {
-        "componentName": "HeroBanner",
-        "slotMappings": {
-          "title": "Event.title",
-          "primary_stat": "Event.stats[0]",
-          "cta": "Event.cta_link"
-        }
-      },
-      {
-        "componentName": "StatsGrid",
-        "slotMappings": {
-          "items": "Event.stats[]"
-        }
-      }
-    ]
-  }
-]
-
-Focus on:
-- Logical connections between models and components
-- All slots should be mapped
-- Use array notation for repeating content
-- Consider the page structure and hierarchy
-
-Return ONLY valid JSON, no markdown formatting.`;
+Map all slots logically. Return ONLY valid JSON.`;
 
     const response = await this.openai.chat.completions.create({
       model: this.modelId,
-      max_tokens: 4000,
+      max_tokens: 2500, // Reduced from 4000 for faster responses
       messages: [
         {
           role: "user",
