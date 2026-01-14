@@ -1051,10 +1051,85 @@ Return ONLY valid JSON.`;
         response_format: { type: "json_object" as const },
       };
 
-      const response = await this.openai.chat.completions.create(requestPayload);
+      // #region agent log
+      const requestStartTime = Date.now();
+      console.log("[DEBUG] ComponentDetector: About to call Venice AI API", {
+        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:beforeApiCall",
+        model: this.modelId,
+        maxTokens: requestPayload.max_tokens,
+        messageContentLength: messageContent.length,
+        hasScreenshot: !!screenshotBase64,
+        baseURL: this.openai.baseURL,
+        timeout: this.openai.timeout,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "G",
+      });
+      // #endregion
+
+      let response;
+      try {
+        response = await this.openai.chat.completions.create(requestPayload);
+        
+        // #region agent log
+        const requestDuration = Date.now() - requestStartTime;
+        console.log("[DEBUG] ComponentDetector: Venice AI API call completed", {
+          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:afterApiCall",
+          durationMs: requestDuration,
+          hasResponse: !!response,
+          hasChoices: !!response?.choices,
+          choicesCount: response?.choices?.length || 0,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "G",
+        });
+        // #endregion
+      } catch (apiError: any) {
+        // #region agent log
+        const requestDuration = Date.now() - requestStartTime;
+        console.error("[DEBUG] ComponentDetector: Venice AI API call failed", {
+          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:apiError",
+          durationMs: requestDuration,
+          error: apiError instanceof Error ? apiError.message : String(apiError),
+          errorName: apiError instanceof Error ? apiError.name : typeof apiError,
+          errorStatus: apiError?.status || apiError?.response?.status,
+          errorResponse: apiError?.response?.data || apiError?.error,
+          stack: apiError instanceof Error ? apiError.stack : undefined,
+          timestamp: new Date().toISOString(),
+          hypothesisId: "G",
+        });
+        // #endregion
+        throw apiError;
+      }
+
+      // #region agent log
+      console.log("[DEBUG] ComponentDetector: Processing API response", {
+        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:processingResponse",
+        hasResponse: !!response,
+        hasChoices: !!response?.choices,
+        choicesLength: response?.choices?.length || 0,
+        hasContent: !!response?.choices?.[0]?.message?.content,
+        contentLength: response?.choices?.[0]?.message?.content?.length || 0,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "G",
+      });
+      // #endregion
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
+        // #region agent log
+        console.error("[DEBUG] ComponentDetector: No content in response", {
+          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:noContent",
+          responseStructure: {
+            hasChoices: !!response?.choices,
+            choicesLength: response?.choices?.length || 0,
+            firstChoice: response?.choices?.[0] ? {
+              hasMessage: !!response.choices[0].message,
+              messageKeys: response.choices[0].message ? Object.keys(response.choices[0].message) : [],
+            } : null,
+          },
+          timestamp: new Date().toISOString(),
+          hypothesisId: "G",
+        });
+        // #endregion
         throw new Error("No response from Venice AI");
       }
 
@@ -1099,6 +1174,16 @@ Return ONLY valid JSON.`;
       );
       }
     } catch (error) {
+      // #region agent log
+      console.error("[DEBUG] ComponentDetector: Error in combined detection and modeling", {
+        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:error",
+        error: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : typeof error,
+        errorStack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "G",
+      });
+      // #endregion
       console.error("Error in combined detection and modeling:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Combined detection and modeling failed. ${errorMessage}`);
