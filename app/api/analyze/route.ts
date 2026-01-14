@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
     const { url } = AnalyzeRequestSchema.parse(body);
 
     // Check cache first
+    const cacheCheckStart = Date.now();
     const cached = analysisCache.get(url);
+    const cacheCheckDuration = Date.now() - cacheCheckStart;
+    
     if (cached) {
       // #region agent log
       console.log("[DEBUG] Analyze API: Returning cached result", {
@@ -50,6 +53,16 @@ export async function POST(request: NextRequest) {
         hypothesisId: "CACHE",
       });
       // #endregion
+
+      // Log cache hit performance
+      console.log("[PERF] Cache hit", {
+        url,
+        cacheCheckDurationMs: cacheCheckDuration,
+        totalDurationMs: cacheCheckDuration,
+        totalDurationSeconds: (cacheCheckDuration / 1000).toFixed(3),
+        cached: true,
+        timestamp: new Date().toISOString(),
+      });
 
       // Return cached result immediately
       return NextResponse.json({
@@ -143,6 +156,8 @@ export async function POST(request: NextRequest) {
  */
 async function analyzeInBackground(jobId: string, url: string): Promise<void> {
   const analyzer = new SiteAnalyzer();
+  const startTime = Date.now();
+  const stageTimings: Record<string, number> = {};
 
   try {
     // Step 1: Scraping (fast, ~1-2s)
@@ -163,7 +178,9 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     });
     // #endregion
 
+    const scrapeStart = Date.now();
     const scrapeResult = await analyzer.scraper.scrape(url);
+    stageTimings.scraping = Date.now() - scrapeStart;
 
     jobStore.updateJob(jobId, {
       progress: 20,
@@ -189,10 +206,12 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     // #endregion
 
     // Use combined method to get both components and models in one AI call
+    const detectionStart = Date.now();
     const { components, models } = await analyzer.componentDetector.detectComponentsAndModels(
       scrapeResult.html,
       scrapeResult.screenshotPath
     );
+    stageTimings.componentsAndModels = Date.now() - detectionStart;
 
     jobStore.updateJob(jobId, {
       progress: 60,
@@ -216,11 +235,13 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     });
     // #endregion
 
+    const mappingStart = Date.now();
     const mappings = await analyzer.mappingService.createMappings(
       models,
       components,
       "Homepage"
     );
+    stageTimings.mapping = Date.now() - mappingStart;
 
     jobStore.updateJob(jobId, {
       progress: 90,
@@ -244,6 +265,7 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     });
     // #endregion
 
+    const exportStart = Date.now();
     const webflowExport = analyzer.webflowExporter.exportToWebflow(
       models,
       components,
@@ -251,6 +273,7 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     );
 
     webflowExport.csvData = analyzer.webflowExporter.generateCSVData(models);
+    stageTimings.export = Date.now() - exportStart;
 
     const analysis = {
       contentModels: models,
@@ -279,6 +302,31 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     });
 
     await analyzer.scraper.close();
+
+    // Calculate total duration
+    const totalDuration = Date.now() - startTime;
+
+    // Log performance metrics
+    console.log("[PERF] Analysis completed", {
+      url,
+      jobId,
+      totalDurationMs: totalDuration,
+      totalDurationSeconds: (totalDuration / 1000).toFixed(2),
+      stageTimings: {
+        scraping: `${(stageTimings.scraping / 1000).toFixed(2)}s`,
+        componentsAndModels: `${(stageTimings.componentsAndModels / 1000).toFixed(2)}s`,
+        mapping: `${(stageTimings.mapping / 1000).toFixed(2)}s`,
+        export: `${(stageTimings.export / 1000).toFixed(2)}s`,
+      },
+      stageTimingsMs: stageTimings,
+      results: {
+        componentCount: components.length,
+        modelCount: models.length,
+        mappingCount: mappings.length,
+      },
+      cached: false,
+      timestamp: new Date().toISOString(),
+    });
 
     // #region agent log
     console.log("[DEBUG] Analyze API: Background analysis completed", {
