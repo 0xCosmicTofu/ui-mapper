@@ -194,48 +194,54 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-      <main className="container mx-auto px-4 py-16 max-w-6xl">
-        {/* Theme Toggle - Top Right */}
-        <div className="flex justify-end mb-4">
-          <ThemeToggle />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 max-w-7xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold">Webflow UI Mapper</h1>
+            </div>
+            <ThemeToggle />
+          </div>
         </div>
-        
-        <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Webflow UI Mapper
-            </h1>
-            <p className="text-xl text-zinc-600 dark:text-zinc-400">
-              Transform any website into Webflow Collections, Symbols, and Bindings
-            </p>
+      </header>
+
+      <main className="container mx-auto px-4 py-12 max-w-4xl">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold mb-4 tracking-tight">
+            Transform Websites to Webflow
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Automatically map any website to Webflow Collections, Symbols, and Bindings using AI
+          </p>
         </div>
 
         <Card className="mb-8">
           <CardContent className="pt-6">
-          <div className="flex gap-4">
+            <div className="flex gap-3">
               <Input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://token2049.com/dubai"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://example.com"
                 className="flex-1"
-              disabled={state.status === "analyzing"}
-            />
+                disabled={state.status === "analyzing"}
+              />
               <Button
-              onClick={handleAnalyze}
-              disabled={state.status === "analyzing"}
-                size="lg"
+                onClick={handleAnalyze}
+                disabled={state.status === "analyzing"}
               >
                 {state.status === "analyzing" ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    Analyzing
                   </>
                 ) : (
                   "Analyze"
                 )}
               </Button>
-          </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -243,10 +249,10 @@ export default function Home() {
           <Card className="mb-8">
             <CardContent className="pt-6">
               <div className="space-y-4">
-            <div className="flex items-center gap-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="flex items-center gap-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   <div className="flex-1">
-                    <p className="font-semibold">
+                    <p className="font-medium">
                       {state.message || "Analyzing website..."}
                     </p>
                     <p className="text-sm text-muted-foreground capitalize">
@@ -254,14 +260,13 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-lg font-semibold">
                       {state.progress || 0}%
-                </p>
-              </div>
-            </div>
-                
+                    </p>
+                  </div>
+                </div>
                 <Progress value={state.progress || 0} className="h-2" />
-          </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -275,7 +280,7 @@ export default function Home() {
         )}
 
         {state.status === "success" && state.analysis && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Export Actions */}
             <Card>
               <CardHeader>
@@ -325,19 +330,19 @@ export default function Home() {
 
             {/* Visual Graph - Full Width */}
             <div className="w-full -mx-4 md:-mx-8 lg:-mx-16 xl:-mx-32">
-              <Card className="mx-4 md:mx-8 lg:mx-16 xl:mx-32">
+              <Card className="mx-4 md:mx-8 lg:mx-16 xl:mx-32 border-0 shadow-none">
                 <CardHeader>
                   <CardTitle>Mapping Visualization</CardTitle>
                   <CardDescription>
-                Interactive graph showing relationships between content models and UI components
+                    Interactive graph showing relationships between content models and UI components
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-              <MappingGraph
-                models={state.analysis.contentModels}
-                components={state.analysis.uiComponents}
-                mappings={state.analysis.mappings}
-              />
+                  <MappingGraph
+                    models={state.analysis.contentModels}
+                    components={state.analysis.uiComponents}
+                    mappings={state.analysis.mappings}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -345,33 +350,33 @@ export default function Home() {
             {/* Mappings - Moved right after Visualization */}
             <Card>
               <CardHeader>
-                <CardTitle>
-                  Mappings
-                  <Badge variant="secondary" className="ml-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle>Mappings</CardTitle>
+                  <Badge variant="secondary">
                     {state.analysis.mappings.length}
                   </Badge>
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-              <div className="space-y-4">
-                {state.analysis.mappings.map((mapping, mappingIndex) => (
-                    <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{mapping.pageName}</CardTitle>
+                <div className="space-y-3">
+                  {state.analysis.mappings.map((mapping, mappingIndex) => (
+                    <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{mapping.pageName}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                    <div className="space-y-3">
+                        <div className="space-y-2">
                       {mapping.componentMappings.map((cm, cmIndex) => {
                         // Guard against undefined/null slotMappings
                         const slotMappings = cm.slotMappings || {};
                         
                         return (
-                            <Card key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`} className="bg-muted/50">
-                              <CardHeader className="pb-3">
-                                <CardTitle className="text-base">{cm.componentName}</CardTitle>
+                            <Card key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`} className="bg-muted/30 border">
+                              <CardHeader className="pb-2 pt-3">
+                                <CardTitle className="text-sm font-medium">{cm.componentName}</CardTitle>
                               </CardHeader>
-                              <CardContent>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <CardContent className="pt-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {Object.entries(slotMappings)
                               .filter(([_, modelPath]) => {
                                 // Filter out invalid mappings (null, undefined, or non-string objects)
@@ -418,15 +423,15 @@ export default function Home() {
                                   : String(displayPath ?? "(invalid mapping)");
                                 
                                 return (
-                                  <div
-                                    key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
+                                        <div
+                                          key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
                                           className="text-sm"
-                                  >
-                                    <span className="font-medium">{slot}</span> →{" "}
-                                          <Badge variant="outline" className="font-mono">
-                                      {safeDisplayPath}
+                                        >
+                                          <span className="font-medium">{slot}</span> →{" "}
+                                          <Badge variant="outline" className="font-mono text-xs">
+                                            {safeDisplayPath}
                                           </Badge>
-                                  </div>
+                                        </div>
                                 );
                               })}
                           </div>
@@ -445,74 +450,75 @@ export default function Home() {
             {/* Content Models */}
             <Card>
               <CardHeader>
-                <CardTitle>
-                  Content Models
-                  <Badge variant="secondary" className="ml-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle>Content Models</CardTitle>
+                  <Badge variant="secondary">
                     {state.analysis.contentModels.length}
                   </Badge>
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-              <div className="space-y-4">
-                {state.analysis.contentModels.map((model, modelIndex) => (
-                    <Card key={`model-${model.name}-${modelIndex}`} className="border-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{model.name}</CardTitle>
+                <div className="space-y-3">
+                  {state.analysis.contentModels.map((model, modelIndex) => (
+                    <Card key={`model-${model.name}-${modelIndex}`} className="border">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{model.name}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {model.fields.map((field, fieldIndex) => (
-                        <div
-                          key={`field-${model.name}-${field.name}-${fieldIndex}`}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {model.fields.map((field, fieldIndex) => (
+                            <div
+                              key={`field-${model.name}-${field.name}-${fieldIndex}`}
                               className="text-sm"
-                        >
-                          <span className="font-medium">{field.name}:</span>{" "}
-                              <Badge variant="outline">{field.type}</Badge>
+                            >
+                              <span className="font-medium">{field.name}:</span>{" "}
+                              <Badge variant="outline" className="text-xs">{field.type}</Badge>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
                       </CardContent>
                     </Card>
-                ))}
-              </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
             {/* UI Components */}
             <Card>
               <CardHeader>
-                <CardTitle>
-                  UI Components
-                  <Badge variant="secondary" className="ml-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle>UI Components</CardTitle>
+                  <Badge variant="secondary">
                     {state.analysis.uiComponents.length}
                   </Badge>
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-              <div className="space-y-4">
-                {state.analysis.uiComponents.map((component, componentIndex) => (
-                    <Card key={`component-${component.name}-${componentIndex}`} className="border-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{component.name}</CardTitle>
-                        <CardDescription className="font-mono text-xs">
-                      {component.selector}
+                <div className="space-y-3">
+                  {state.analysis.uiComponents.map((component, componentIndex) => (
+                    <Card key={`component-${component.name}-${componentIndex}`} className="border">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{component.name}</CardTitle>
+                        <CardDescription className="font-mono text-xs mt-1">
+                          {component.selector}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-2">
-                      {component.slots.map((slot, slotIndex) => (
+                          {component.slots.map((slot, slotIndex) => (
                             <Badge
-                          key={`slot-${component.name}-${slot.name}-${slotIndex}`}
+                              key={`slot-${component.name}-${slot.name}-${slotIndex}`}
                               variant="outline"
-                        >
-                          {slot.name} ({slot.type})
+                              className="text-xs"
+                            >
+                              {slot.name} ({slot.type})
                             </Badge>
-                      ))}
-                  </div>
+                          ))}
+                        </div>
                       </CardContent>
                     </Card>
-                ))}
-              </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
