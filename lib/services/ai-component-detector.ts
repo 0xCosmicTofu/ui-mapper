@@ -1032,211 +1032,44 @@ Requirements:
         response_format: { type: "json_object" as const },
       };
 
-      // #region agent log
-      const requestStartTime = Date.now();
-      console.log("[DEBUG] ComponentDetector: About to call Venice AI API", {
-        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:beforeApiCall",
-        model: this.modelId,
-        maxTokens: requestPayload.max_tokens,
-        messageContentLength: messageContent.length,
-        hasScreenshot: !!screenshotBase64,
-        baseURL: this.openai.baseURL,
-        timeout: this.openai.timeout,
-        timestamp: new Date().toISOString(),
-        hypothesisId: "G",
-      });
-      // #endregion
-
-      let response;
-      try {
-        response = await this.openai.chat.completions.create(requestPayload);
-        
-        // #region agent log
-        const requestDuration = Date.now() - requestStartTime;
-        console.log("[DEBUG] ComponentDetector: Venice AI API call completed", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:afterApiCall",
-          durationMs: requestDuration,
-          hasResponse: !!response,
-          hasChoices: !!response?.choices,
-          choicesCount: response?.choices?.length || 0,
-          timestamp: new Date().toISOString(),
-          hypothesisId: "G",
-        });
-        // #endregion
-      } catch (apiError: any) {
-        // #region agent log
-        const requestDuration = Date.now() - requestStartTime;
-        console.error("[DEBUG] ComponentDetector: Venice AI API call failed", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:apiError",
-          durationMs: requestDuration,
-          error: apiError instanceof Error ? apiError.message : String(apiError),
-          errorName: apiError instanceof Error ? apiError.name : typeof apiError,
-          errorStatus: apiError?.status || apiError?.response?.status,
-          errorResponse: apiError?.response?.data || apiError?.error,
-          stack: apiError instanceof Error ? apiError.stack : undefined,
-          timestamp: new Date().toISOString(),
-          hypothesisId: "G",
-        });
-        // #endregion
-        throw apiError;
-      }
-
-      // #region agent log
-      console.log("[DEBUG] ComponentDetector: Processing API response", {
-        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:processingResponse",
-        hasResponse: !!response,
-        hasChoices: !!response?.choices,
-        choicesLength: response?.choices?.length || 0,
-        hasContent: !!response?.choices?.[0]?.message?.content,
-        contentLength: response?.choices?.[0]?.message?.content?.length || 0,
-        timestamp: new Date().toISOString(),
-        hypothesisId: "G",
-      });
-      // #endregion
+      const response = await this.openai.chat.completions.create(requestPayload);
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-        // #region agent log
-        console.error("[DEBUG] ComponentDetector: No content in response", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:noContent",
-          responseStructure: {
-            hasChoices: !!response?.choices,
-            choicesLength: response?.choices?.length || 0,
-            firstChoice: response?.choices?.[0] ? {
-              hasMessage: !!response.choices[0].message,
-              messageKeys: response.choices[0].message ? Object.keys(response.choices[0].message) : [],
-            } : null,
-          },
-          timestamp: new Date().toISOString(),
-          hypothesisId: "G",
-        });
-        // #endregion
         throw new Error("No response from Venice AI");
       }
 
       const jsonText = content.trim();
-      
-      // #region agent log
-      console.log("[DEBUG] ComponentDetector: Raw response received", {
-        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:rawResponse",
-        responseLength: jsonText.length,
-        responsePreview: jsonText.substring(0, 200),
-        responseSuffix: jsonText.substring(Math.max(0, jsonText.length - 200)),
-        timestamp: new Date().toISOString(),
-        hypothesisId: "H",
-      });
-      // #endregion
-      
       let cleanedJson = jsonText;
 
       // Extract JSON from markdown code blocks
       const codeBlockMatch = jsonText.match(/```json\s*([\s\S]*?)```/);
       if (codeBlockMatch && codeBlockMatch[1]) {
         cleanedJson = codeBlockMatch[1].trim();
-        // #region agent log
-        console.log("[DEBUG] ComponentDetector: Extracted JSON from code block", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:extractedFromCodeBlock",
-          cleanedLength: cleanedJson.length,
-          timestamp: new Date().toISOString(),
-          hypothesisId: "H",
-        });
-        // #endregion
       } else {
         cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const jsonObjectMatch = cleanedJson.match(/^(\{[\s\S]*\})/);
         if (jsonObjectMatch) {
           cleanedJson = jsonObjectMatch[1];
-          // #region agent log
-          console.log("[DEBUG] ComponentDetector: Extracted JSON object from text", {
-            location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:extractedObject",
-            cleanedLength: cleanedJson.length,
-            timestamp: new Date().toISOString(),
-            hypothesisId: "H",
-          });
-          // #endregion
         }
-      }
-
-      // #region agent log
-      console.log("[DEBUG] ComponentDetector: About to parse JSON", {
-        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:beforeParse",
-        cleanedJsonLength: cleanedJson.length,
-        cleanedJsonPreview: cleanedJson.substring(0, 500),
-        cleanedJsonSuffix: cleanedJson.substring(Math.max(0, cleanedJson.length - 500)),
-        timestamp: new Date().toISOString(),
-        hypothesisId: "H",
-      });
-      // #endregion
+    }
 
     try {
         const parsed = JSON.parse(cleanedJson);
-        
-        // #region agent log
-        console.log("[DEBUG] ComponentDetector: JSON parsed successfully", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:parseSuccess",
-          hasComponents: !!parsed.components,
-          hasModels: !!parsed.models,
-          componentsType: Array.isArray(parsed.components) ? 'array' : typeof parsed.components,
-          modelsType: Array.isArray(parsed.models) ? 'array' : typeof parsed.models,
-          componentsLength: Array.isArray(parsed.components) ? parsed.components.length : 0,
-          modelsLength: Array.isArray(parsed.models) ? parsed.models.length : 0,
-          timestamp: new Date().toISOString(),
-          hypothesisId: "H",
-        });
-        // #endregion
         
         // Extract components and models from response
         const components = (parsed.components || []) as UIComponent[];
         const models = (parsed.models || []) as ContentModel[];
         
-        // #region agent log
-        console.log("[DEBUG] ComponentDetector: Combined detection and modeling completed", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:success",
-          componentCount: components.length,
-          modelCount: models.length,
-          timestamp: new Date().toISOString(),
-          hypothesisId: "E",
-        });
-        // #endregion
-        
         return { components, models };
     } catch (parseError) {
-        // #region agent log
-        const errorPosition = parseError instanceof SyntaxError && (parseError as any).message?.match(/position (\d+)/);
-        const errorLine = parseError instanceof SyntaxError && (parseError as any).message?.match(/line (\d+)/);
-        console.error("[DEBUG] ComponentDetector: JSON parse error", {
-          location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:parseError",
-          error: parseError instanceof Error ? parseError.message : String(parseError),
-          errorPosition: errorPosition ? parseInt(errorPosition[1]) : null,
-          errorLine: errorLine ? parseInt(errorLine[1]) : null,
-          cleanedJsonLength: cleanedJson.length,
-          cleanedJsonAroundError: errorPosition ? cleanedJson.substring(Math.max(0, parseInt(errorPosition[1]) - 100), parseInt(errorPosition[1]) + 100) : null,
-          cleanedJsonPreview: cleanedJson.substring(0, 1000),
-          timestamp: new Date().toISOString(),
-          hypothesisId: "H",
-        });
-        // #endregion
-        
         console.error("Failed to parse combined response JSON:", parseError);
         console.error("Raw response:", jsonText);
-        console.error("Cleaned JSON (first 2000 chars):", cleanedJson.substring(0, 2000));
-        console.error("Cleaned JSON (last 2000 chars):", cleanedJson.substring(Math.max(0, cleanedJson.length - 2000)));
-        
       throw new Error(
           `Failed to parse combined response. ${parseError instanceof Error ? parseError.message : String(parseError)}`
       );
       }
     } catch (error) {
-      // #region agent log
-      console.error("[DEBUG] ComponentDetector: Error in combined detection and modeling", {
-        location: "lib/services/ai-component-detector.ts:detectComponentsAndModels:error",
-        error: error instanceof Error ? error.message : String(error),
-        errorName: error instanceof Error ? error.name : typeof error,
-        errorStack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString(),
-        hypothesisId: "G",
-      });
-      // #endregion
       console.error("Error in combined detection and modeling:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Combined detection and modeling failed. ${errorMessage}`);
