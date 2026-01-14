@@ -7,7 +7,51 @@
  * @returns Trimmed environment variable value or default value (also trimmed)
  */
 export function getEnv(key: string, defaultValue?: string): string {
+  // #region agent log
+  const rawValue = process.env[key];
+  const hasRawValue = rawValue !== undefined;
+  const rawValueLength = rawValue?.length ?? 0;
+  const defaultValueProvided = defaultValue !== undefined;
+  
+  // Only log for VENICE_API_KEY to avoid noise
+  if (key === 'VENICE_API_KEY') {
+    console.log("[DEBUG] getEnv: Called for VENICE_API_KEY", {
+      location: "lib/utils/env.ts:getEnv:entry",
+      key,
+      hasRawValue,
+      rawValueLength,
+      rawValuePrefix: rawValue?.substring(0, 10) || 'none',
+      defaultValueProvided,
+      defaultValueLength: defaultValue?.length || 0,
+      allVeniceKeys: Object.keys(process.env).filter(k => k.toUpperCase().includes('VENICE')),
+      timestamp: new Date().toISOString(),
+      hypothesisId: "A",
+    });
+  }
+  // #endregion
+  
   const value = process.env[key] || defaultValue;
+  
+  // #region agent log
+  const finalValue = value === undefined ? '' : value.trim();
+  const finalValueLength = finalValue.length;
+  
+  // Only log for VENICE_API_KEY to avoid noise
+  if (key === 'VENICE_API_KEY') {
+    console.log("[DEBUG] getEnv: Returning for VENICE_API_KEY", {
+      location: "lib/utils/env.ts:getEnv:exit",
+      key,
+      valueWasUndefined: value === undefined,
+      rawValueLength: value?.length || 0,
+      finalValueLength,
+      isEmpty: finalValue === '',
+      hasDefaultValue: !!defaultValue,
+      timestamp: new Date().toISOString(),
+      hypothesisId: "A",
+    });
+  }
+  // #endregion
+  
   if (value === undefined) {
     return '';
   }

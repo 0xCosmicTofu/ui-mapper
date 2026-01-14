@@ -10,7 +10,33 @@ export class ComponentDetector {
   private modelId: string;
 
   constructor() {
+    // #region agent log
+    console.log("[DEBUG] ComponentDetector: Constructor entry", {
+      location: "lib/services/ai-component-detector.ts:constructor:entry",
+      nodeEnv: process.env.NODE_ENV,
+      hasProcessEnv: typeof process !== 'undefined' && !!process.env,
+      veniceKeyInEnv: 'VENICE_API_KEY' in (process.env || {}),
+      veniceKeyRawValue: process.env.VENICE_API_KEY ? `${process.env.VENICE_API_KEY.substring(0, 10)}...` : 'undefined',
+      veniceKeyLength: process.env.VENICE_API_KEY?.length || 0,
+      allVeniceKeys: Object.keys(process.env || {}).filter(k => k.toUpperCase().includes('VENICE')),
+      timestamp: new Date().toISOString(),
+      hypothesisId: "B",
+    });
+    // #endregion
+    
     const rawVeniceKey = getEnv("VENICE_API_KEY");
+    
+    // #region agent log
+    console.log("[DEBUG] ComponentDetector: After getEnv call", {
+      location: "lib/services/ai-component-detector.ts:constructor:afterGetEnv",
+      rawVeniceKeyLength: rawVeniceKey.length,
+      rawVeniceKeyIsEmpty: rawVeniceKey === '',
+      rawVeniceKeyPrefix: rawVeniceKey.substring(0, 20) || 'empty',
+      timestamp: new Date().toISOString(),
+      hypothesisId: "C",
+    });
+    // #endregion
+    
     // Clean API key - remove any "VENICE_API_KEY=" prefix if accidentally included
     // Also remove any trailing newlines, carriage returns, or whitespace
     let veniceKey = rawVeniceKey.replace(/^VENICE_API_KEY\s*=\s*/i, "").trim();
@@ -30,9 +56,23 @@ export class ComponentDetector {
       timestamp: new Date().toISOString(),
       hypothesisId: "R",
     });
+    fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/services/ai-component-detector.ts:constructor:afterCleaning',message:'After API key cleaning',data:{rawVeniceKeyLength:rawVeniceKey.length,cleanedKeyLength:veniceKey.length,cleanedKeyIsEmpty:veniceKey==='',willThrow:!veniceKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
     
     if (!veniceKey) {
+      // #region agent log
+      console.error("[DEBUG] ComponentDetector: Throwing VENICE_API_KEY is required error", {
+        location: "lib/services/ai-component-detector.ts:constructor:error",
+        rawVeniceKeyLength: rawVeniceKey.length,
+        cleanedKeyLength: veniceKey.length,
+        rawVeniceKeyIsEmpty: rawVeniceKey === '',
+        cleanedKeyIsEmpty: veniceKey === '',
+        processEnvVeniceKey: process.env.VENICE_API_KEY ? 'exists' : 'missing',
+        processEnvVeniceKeyLength: process.env.VENICE_API_KEY?.length || 0,
+        timestamp: new Date().toISOString(),
+        hypothesisId: "E",
+      });
+      // #endregion
       throw new Error("VENICE_API_KEY is required");
     }
 
