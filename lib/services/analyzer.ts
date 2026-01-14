@@ -13,8 +13,47 @@ export class SiteAnalyzer {
   public webflowExporter: WebflowExporter;
 
   constructor() {
+    // #region agent log
+    console.log("[DEBUG] SiteAnalyzer: Constructor called", {
+      location: "lib/services/analyzer.ts:constructor",
+      hasProcessEnv: typeof process !== 'undefined' && !!process.env,
+      veniceKeyExists: 'VENICE_API_KEY' in (process.env || {}),
+      veniceKeyValue: process.env.VENICE_API_KEY ? `${process.env.VENICE_API_KEY.substring(0, 10)}...` : 'undefined',
+      allVeniceKeys: Object.keys(process.env || {}).filter(k => k.toUpperCase().includes('VENICE')),
+      nodeEnv: process.env.NODE_ENV,
+      timestamp: new Date().toISOString(),
+      hypothesisId: "F",
+    });
+    // #endregion
+    
     this.scraper = new WebScraper();
-    this.componentDetector = new ComponentDetector();
+    
+    // #region agent log
+    console.log("[DEBUG] SiteAnalyzer: About to create ComponentDetector", {
+      location: "lib/services/analyzer.ts:constructor:beforeComponentDetector",
+      veniceKeyExists: 'VENICE_API_KEY' in (process.env || {}),
+      timestamp: new Date().toISOString(),
+      hypothesisId: "F",
+    });
+    // #endregion
+    
+    try {
+      this.componentDetector = new ComponentDetector();
+    } catch (error) {
+      // #region agent log
+      console.error("[DEBUG] SiteAnalyzer: ComponentDetector creation failed", {
+        location: "lib/services/analyzer.ts:constructor:componentDetectorError",
+        error: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        veniceKeyExists: 'VENICE_API_KEY' in (process.env || {}),
+        veniceKeyValue: process.env.VENICE_API_KEY ? 'exists' : 'missing',
+        timestamp: new Date().toISOString(),
+        hypothesisId: "F",
+      });
+      // #endregion
+      throw error;
+    }
+    
     this.contentModeler = new ContentModeler();
     this.mappingService = new MappingService();
     this.webflowExporter = new WebflowExporter();
