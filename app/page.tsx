@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertCircle, Download, FileJson, FileSpreadsheet } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type AnalysisState = {
   status: "idle" | "analyzing" | "success" | "error";
@@ -114,10 +115,10 @@ export default function Home() {
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
-            }
+      }
 
-            setState({
-              status: "success",
+      setState({
+        status: "success",
               progress: 100,
               stage: "complete",
               message: "Analysis complete!",
@@ -195,6 +196,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-16 max-w-6xl">
+        {/* Theme Toggle - Top Right */}
+        <div className="flex justify-end mb-4">
+          <ThemeToggle />
+        </div>
+        
         <div className="text-center mb-8">
             <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Webflow UI Mapper
@@ -317,20 +323,122 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Visual Graph */}
+            {/* Visual Graph - Full Width */}
+            <div className="w-full -mx-4 md:-mx-8 lg:-mx-16 xl:-mx-32">
+              <Card className="mx-4 md:mx-8 lg:mx-16 xl:mx-32">
+                <CardHeader>
+                  <CardTitle>Mapping Visualization</CardTitle>
+                  <CardDescription>
+                Interactive graph showing relationships between content models and UI components
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+              <MappingGraph
+                models={state.analysis.contentModels}
+                components={state.analysis.uiComponents}
+                mappings={state.analysis.mappings}
+              />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Mappings - Moved right after Visualization */}
             <Card>
               <CardHeader>
-                <CardTitle>Mapping Visualization</CardTitle>
-                <CardDescription>
-                  Interactive graph showing relationships between content models and UI components
-                </CardDescription>
+                <CardTitle>
+                  Mappings
+                  <Badge variant="secondary" className="ml-2">
+                    {state.analysis.mappings.length}
+                  </Badge>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <MappingGraph
-                  models={state.analysis.contentModels}
-                  components={state.analysis.uiComponents}
-                  mappings={state.analysis.mappings}
-                />
+              <div className="space-y-4">
+                {state.analysis.mappings.map((mapping, mappingIndex) => (
+                    <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border-2">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{mapping.pageName}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                    <div className="space-y-3">
+                      {mapping.componentMappings.map((cm, cmIndex) => {
+                        // Guard against undefined/null slotMappings
+                        const slotMappings = cm.slotMappings || {};
+                        
+                        return (
+                            <Card key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`} className="bg-muted/50">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base">{cm.componentName}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {Object.entries(slotMappings)
+                              .filter(([_, modelPath]) => {
+                                // Filter out invalid mappings (null, undefined, or non-string objects)
+                                if (modelPath === null || modelPath === undefined) {
+                                  return false;
+                                }
+                                if (typeof modelPath === "string") {
+                                  return true;
+                                }
+                                // For objects, we'll convert them to strings, so include them
+                                return true;
+                              })
+                              .map(([slot, modelPath], slotIndex) => {
+                                // Safely convert modelPath to string for rendering
+                                let displayPath: string;
+                                if (typeof modelPath === "string") {
+                                  displayPath = modelPath;
+                                } else if (modelPath === null || modelPath === undefined) {
+                                  displayPath = "(unmapped)";
+                                } else if (typeof modelPath === "object") {
+                                  // If it's an object, try to extract a meaningful value
+                                  const obj = modelPath as Record<string, unknown>;
+                                  if ("label" in obj && typeof obj.label === "string") {
+                                    displayPath = obj.label;
+                                  } else if ("url" in obj && typeof obj.url === "string") {
+                                    displayPath = obj.url;
+                                  } else if ("path" in obj && typeof obj.path === "string") {
+                                    displayPath = obj.path;
+                                  } else {
+                                    // Fallback: stringify the object (but make it readable)
+                                    try {
+                                      displayPath = JSON.stringify(obj, null, 2);
+                                    } catch {
+                                      displayPath = String(obj);
+                                    }
+                                  }
+                                } else {
+                                  displayPath = String(modelPath);
+                                }
+                                
+                                // Final safety check: ensure displayPath is always a string
+                                const safeDisplayPath = typeof displayPath === "string" 
+                                  ? displayPath 
+                                  : String(displayPath ?? "(invalid mapping)");
+                                
+                                return (
+                                  <div
+                                    key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
+                                          className="text-sm"
+                                  >
+                                    <span className="font-medium">{slot}</span> →{" "}
+                                          <Badge variant="outline" className="font-mono">
+                                      {safeDisplayPath}
+                                          </Badge>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                              </CardContent>
+                            </Card>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
@@ -345,28 +453,28 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {state.analysis.contentModels.map((model, modelIndex) => (
+              <div className="space-y-4">
+                {state.analysis.contentModels.map((model, modelIndex) => (
                     <Card key={`model-${model.name}-${modelIndex}`} className="border-2">
                       <CardHeader>
                         <CardTitle className="text-lg">{model.name}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {model.fields.map((field, fieldIndex) => (
-                            <div
-                              key={`field-${model.name}-${field.name}-${fieldIndex}`}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {model.fields.map((field, fieldIndex) => (
+                        <div
+                          key={`field-${model.name}-${field.name}-${fieldIndex}`}
                               className="text-sm"
-                            >
-                              <span className="font-medium">{field.name}:</span>{" "}
+                        >
+                          <span className="font-medium">{field.name}:</span>{" "}
                               <Badge variant="outline">{field.type}</Badge>
-                            </div>
-                          ))}
                         </div>
+                      ))}
+                    </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                ))}
+              </div>
               </CardContent>
             </Card>
 
@@ -381,132 +489,33 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {state.analysis.uiComponents.map((component, componentIndex) => (
+              <div className="space-y-4">
+                {state.analysis.uiComponents.map((component, componentIndex) => (
                     <Card key={`component-${component.name}-${componentIndex}`} className="border-2">
                       <CardHeader>
                         <CardTitle className="text-lg">{component.name}</CardTitle>
                         <CardDescription className="font-mono text-xs">
-                          {component.selector}
+                      {component.selector}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-2">
-                          {component.slots.map((slot, slotIndex) => (
+                      {component.slots.map((slot, slotIndex) => (
                             <Badge
-                              key={`slot-${component.name}-${slot.name}-${slotIndex}`}
+                          key={`slot-${component.name}-${slot.name}-${slotIndex}`}
                               variant="outline"
-                            >
-                              {slot.name} ({slot.type})
+                        >
+                          {slot.name} ({slot.type})
                             </Badge>
-                          ))}
-                        </div>
+                      ))}
+                  </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                ))}
+              </div>
               </CardContent>
             </Card>
 
-            {/* Mappings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  Mappings
-                  <Badge variant="secondary" className="ml-2">
-                    {state.analysis.mappings.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {state.analysis.mappings.map((mapping, mappingIndex) => (
-                    <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{mapping.pageName}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {mapping.componentMappings.map((cm, cmIndex) => {
-                            // Guard against undefined/null slotMappings
-                            const slotMappings = cm.slotMappings || {};
-                            
-                            return (
-                            <Card key={`${mapping.pageName}-${cm.componentName}-${cmIndex}`} className="bg-muted/50">
-                              <CardHeader className="pb-3">
-                                <CardTitle className="text-base">{cm.componentName}</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                  {Object.entries(slotMappings)
-                                    .filter(([_, modelPath]) => {
-                                      // Filter out invalid mappings (null, undefined, or non-string objects)
-                                      if (modelPath === null || modelPath === undefined) {
-                                        return false;
-                                      }
-                                      if (typeof modelPath === "string") {
-                                        return true;
-                                      }
-                                      // For objects, we'll convert them to strings, so include them
-                                      return true;
-                                    })
-                                    .map(([slot, modelPath], slotIndex) => {
-                                      // Safely convert modelPath to string for rendering
-                                      let displayPath: string;
-                                      if (typeof modelPath === "string") {
-                                        displayPath = modelPath;
-                                      } else if (modelPath === null || modelPath === undefined) {
-                                        displayPath = "(unmapped)";
-                                      } else if (typeof modelPath === "object") {
-                                        // If it's an object, try to extract a meaningful value
-                                        const obj = modelPath as Record<string, unknown>;
-                                        if ("label" in obj && typeof obj.label === "string") {
-                                          displayPath = obj.label;
-                                        } else if ("url" in obj && typeof obj.url === "string") {
-                                          displayPath = obj.url;
-                                        } else if ("path" in obj && typeof obj.path === "string") {
-                                          displayPath = obj.path;
-                                        } else {
-                                          // Fallback: stringify the object (but make it readable)
-                                          try {
-                                            displayPath = JSON.stringify(obj, null, 2);
-                                          } catch {
-                                            displayPath = String(obj);
-                                          }
-                                        }
-                                      } else {
-                                        displayPath = String(modelPath);
-                                      }
-                                      
-                                      // Final safety check: ensure displayPath is always a string
-                                      const safeDisplayPath = typeof displayPath === "string" 
-                                        ? displayPath 
-                                        : String(displayPath ?? "(invalid mapping)");
-                                      
-                                      return (
-                                        <div
-                                          key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
-                                          className="text-sm"
-                                        >
-                                          <span className="font-medium">{slot}</span> →{" "}
-                                          <span className="text-muted-foreground font-mono">
-                                            {safeDisplayPath}
-                                          </span>
-                                        </div>
-                                      );
-                                    })}
-                                </div>
-                              </CardContent>
-                            </Card>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Screenshot */}
             {state.analysis.metadata.screenshotPath && (
@@ -515,11 +524,11 @@ export default function Home() {
                   <CardTitle>Screenshot</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <img
-                    src={state.analysis.metadata.screenshotPath}
-                    alt="Website screenshot"
+                <img
+                  src={state.analysis.metadata.screenshotPath}
+                  alt="Website screenshot"
                     className="rounded-lg border w-full"
-                  />
+                />
                 </CardContent>
               </Card>
             )}
