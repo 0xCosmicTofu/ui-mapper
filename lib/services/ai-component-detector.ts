@@ -969,55 +969,36 @@ Focus on reusable components with clear slots. Return ONLY valid JSON.`;
     }
 
     // Combined prompt for both component detection and content modeling
+    // Use more explicit JSON format instructions to avoid parsing errors
     const prompt = screenshotBase64
-      ? `Analyze this webpage HTML and screenshot. Perform BOTH tasks in one response:
-
-1. Identify 5-10 reusable UI components
-2. Extract semantic content models
+      ? `Analyze this webpage HTML and screenshot. Return a valid JSON object with "components" and "models" arrays.
 
 HTML:
 \`\`\`html
 ${html.substring(0, 50000)}
 \`\`\`
 
-Output JSON object with both:
-{
-  "components": [
-    {"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"description":"Hero banner"}
-  ],
-  "models": [
-    {"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}
-  ]
-}
+Return ONLY this JSON structure (no markdown, no extra text, no explanations):
+{"components":[{"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"description":"Hero banner"}],"models":[{"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}]}
 
-Components: reusable UI elements with slots.
-Models: data structures that populate components.
-
-Return ONLY valid JSON.`
-      : `Analyze this webpage HTML. Perform BOTH tasks in one response:
-
-1. Identify 5-10 reusable UI components
-2. Extract semantic content models
+Requirements:
+- components: array of reusable UI elements with name, selector, slots array, description
+- models: array of data models with name, fields array, description
+- Return ONLY valid JSON, no markdown code blocks, no explanations`
+      : `Analyze this webpage HTML. Return a valid JSON object with "components" and "models" arrays.
 
 HTML:
 \`\`\`html
 ${html.substring(0, 50000)}
 \`\`\`
 
-Output JSON object with both:
-{
-  "components": [
-    {"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"description":"Hero banner"}
-  ],
-  "models": [
-    {"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}
-  ]
-}
+Return ONLY this JSON structure (no markdown, no extra text, no explanations):
+{"components":[{"name":"HeroBanner","selector":".hero","slots":[{"name":"title","selector":"h1","type":"text"}],"description":"Hero banner"}],"models":[{"name":"Event","fields":[{"name":"title","type":"string","description":"Event title"}],"description":"Event data"}]}
 
-Components: reusable UI elements with slots.
-Models: data structures that populate components.
-
-Return ONLY valid JSON.`;
+Requirements:
+- components: array of reusable UI elements with name, selector, slots array, description
+- models: array of data models with name, fields array, description
+- Return ONLY valid JSON, no markdown code blocks, no explanations`;
 
     try {
       const messageContent: Array<
