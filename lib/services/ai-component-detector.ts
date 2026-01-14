@@ -946,15 +946,6 @@ Focus on reusable components with clear slots. Return ONLY valid JSON.`;
     html: string,
     screenshotPath: string
   ): Promise<{ components: UIComponent[]; models: ContentModel[] }> {
-    // #region agent log
-    console.log("[DEBUG] ComponentDetector: Starting combined detection and modeling", {
-      location: "lib/services/ai-component-detector.ts:detectComponentsAndModels",
-      htmlLength: html.length,
-      hasScreenshot: !!screenshotPath,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
 
     let screenshotBase64: string | null = null;
     
