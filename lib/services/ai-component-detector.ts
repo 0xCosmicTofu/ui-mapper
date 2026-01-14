@@ -61,6 +61,7 @@ export class ComponentDetector {
     
     if (!veniceKey) {
       // #region agent log
+      const envKeys = Object.keys(process.env || {}).filter(k => k.toUpperCase().includes('VENICE') || k.toUpperCase().includes('API'));
       console.error("[DEBUG] ComponentDetector: Throwing VENICE_API_KEY is required error", {
         location: "lib/services/ai-component-detector.ts:constructor:error",
         rawVeniceKeyLength: rawVeniceKey.length,
@@ -69,11 +70,20 @@ export class ComponentDetector {
         cleanedKeyIsEmpty: veniceKey === '',
         processEnvVeniceKey: process.env.VENICE_API_KEY ? 'exists' : 'missing',
         processEnvVeniceKeyLength: process.env.VENICE_API_KEY?.length || 0,
+        allVeniceKeys: envKeys,
+        nodeEnv: process.env.NODE_ENV,
+        vercelEnv: process.env.VERCEL_ENV,
         timestamp: new Date().toISOString(),
         hypothesisId: "E",
       });
       // #endregion
-      throw new Error("VENICE_API_KEY is required");
+      
+      // Provide helpful error message
+      const errorMessage = process.env.VENICE_API_KEY 
+        ? `VENICE_API_KEY is set but appears to be empty or invalid (length: ${process.env.VENICE_API_KEY.length}). Please check Vercel environment variables.`
+        : `VENICE_API_KEY is not set. Please configure it in Vercel Dashboard → Settings → Environment Variables for ${process.env.VERCEL_ENV || 'preview'} deployments.`;
+      
+      throw new Error(errorMessage);
     }
 
     // Venice AI provides OpenAI-compatible API

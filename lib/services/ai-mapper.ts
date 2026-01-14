@@ -9,7 +9,10 @@ export class MappingService {
   constructor() {
     const veniceKey = getEnv("VENICE_API_KEY");
     if (!veniceKey) {
-      throw new Error("VENICE_API_KEY is required");
+      const errorMessage = process.env.VENICE_API_KEY 
+        ? `VENICE_API_KEY is set but appears to be empty or invalid (length: ${process.env.VENICE_API_KEY.length}). Please check Vercel environment variables.`
+        : `VENICE_API_KEY is not set. Please configure it in Vercel Dashboard → Settings → Environment Variables for ${process.env.VERCEL_ENV || 'preview'} deployments.`;
+      throw new Error(errorMessage);
     }
 
     // Venice AI provides OpenAI-compatible API
