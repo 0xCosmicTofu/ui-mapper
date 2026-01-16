@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 
 // Middleware disabled - authentication removed for testing
-export const runtime = "experimental-edge";
+// Removed experimental-edge runtime to avoid dev server issues
 
 export default async function middleware(req: NextRequest) {
   // No authentication checks - all routes are public

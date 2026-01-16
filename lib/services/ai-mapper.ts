@@ -76,7 +76,7 @@ Map all slots logically. Return ONLY valid JSON.`;
     } else {
       // Fallback: remove markdown code block markers if present
       cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      
+    
       // If there's still extra content after the JSON, try to extract just the JSON
       // Find the first complete JSON array or object
       const jsonArrayMatch = cleanedJson.match(/^(\[[\s\S]*\])/);

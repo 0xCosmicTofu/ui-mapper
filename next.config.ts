@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   
   // Optimize for production
   compress: true,
+  
+  // Set Turbopack root to silence workspace root warning
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 export default nextConfig;
