@@ -29,7 +29,7 @@ export class WebScraper {
       });
 
       const rawHtml = response.data as string;
-      
+
       // Preprocess HTML to reduce size and improve AI processing speed
       const html = preprocessHTML(rawHtml, 50000);
       

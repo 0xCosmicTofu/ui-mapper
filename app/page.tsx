@@ -124,7 +124,7 @@ export default function Home() {
               message: "Analysis complete!",
               analysis: statusResult.result?.analysis,
               webflowExport: statusResult.result?.webflowExport,
-            });
+      });
           } else if (statusResult.status === "error") {
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
@@ -207,31 +207,32 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4 tracking-tight">
-            Transform Websites to Webflow
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Automatically map any website to Webflow Collections, Symbols, and Bindings using AI
-          </p>
+      <main className="py-12">
+        <div className="container mx-auto px-4 max-w-[1440px]">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4 tracking-tight">
+              Transform Websites to Webflow
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Automatically map any website to Webflow Collections, Symbols, and Bindings using AI
+            </p>
         </div>
 
-        <Card className="mb-8">
+          <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="flex gap-3">
               <Input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://example.com"
                 className="flex-1"
-                disabled={state.status === "analyzing"}
-              />
+              disabled={state.status === "analyzing"}
+            />
               <Button
-                onClick={handleAnalyze}
-                disabled={state.status === "analyzing"}
-              >
+              onClick={handleAnalyze}
+              disabled={state.status === "analyzing"}
+            >
                 {state.status === "analyzing" ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -241,20 +242,22 @@ export default function Home() {
                   "Analyze"
                 )}
               </Button>
-            </div>
+          </div>
           </CardContent>
         </Card>
+        </div>
 
         {state.status === "analyzing" && (
+          <div className="container mx-auto px-4 max-w-[1440px]">
           <Card className="mb-8">
             <CardContent className="pt-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   <div className="flex-1">
                     <p className="font-medium">
                       {state.message || "Analyzing website..."}
-                    </p>
+                </p>
                     <p className="text-sm text-muted-foreground capitalize">
                       {state.stage || "processing"}
                     </p>
@@ -262,26 +265,30 @@ export default function Home() {
                   <div className="text-right">
                     <p className="text-lg font-semibold">
                       {state.progress || 0}%
-                    </p>
-                  </div>
-                </div>
+                </p>
+              </div>
+            </div>
                 <Progress value={state.progress || 0} className="h-2" />
               </div>
             </CardContent>
           </Card>
+          </div>
         )}
 
         {state.status === "error" && (
+          <div className="container mx-auto px-4 max-w-[1440px]">
           <Alert variant="destructive" className="mb-8">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{state.error}</AlertDescription>
           </Alert>
+          </div>
         )}
 
         {state.status === "success" && state.analysis && (
-          <div className="space-y-6">
+          <>
             {/* Export Actions */}
+            <div className="container mx-auto px-4 max-w-[1440px]">
             <Card>
               <CardHeader>
                 <CardTitle>Export Options</CardTitle>
@@ -327,27 +334,29 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+            </div>
 
-            {/* Visual Graph - Full Width */}
-            <div className="w-full -mx-4 md:-mx-8 lg:-mx-16 xl:-mx-32">
-              <Card className="mx-4 md:mx-8 lg:mx-16 xl:mx-32 border-0 shadow-none">
+            {/* Visual Graph */}
+            <div className="container mx-auto px-4 max-w-[1440px]">
+              <Card>
                 <CardHeader>
                   <CardTitle>Mapping Visualization</CardTitle>
                   <CardDescription>
-                    Interactive graph showing relationships between content models and UI components
+                Interactive graph showing relationships between content models and UI components
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <MappingGraph
-                    models={state.analysis.contentModels}
-                    components={state.analysis.uiComponents}
-                    mappings={state.analysis.mappings}
-                  />
+              <MappingGraph
+                models={state.analysis.contentModels}
+                components={state.analysis.uiComponents}
+                mappings={state.analysis.mappings}
+              />
                 </CardContent>
               </Card>
             </div>
 
             {/* Mappings - Moved right after Visualization */}
+            <div className="container mx-auto px-4 max-w-[1440px]">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -355,11 +364,11 @@ export default function Home() {
                   <Badge variant="secondary">
                     {state.analysis.mappings.length}
                   </Badge>
-                </div>
+                        </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {state.analysis.mappings.map((mapping, mappingIndex) => (
+                {state.analysis.mappings.map((mapping, mappingIndex) => (
                     <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base">{mapping.pageName}</CardTitle>
@@ -376,7 +385,7 @@ export default function Home() {
                                 <CardTitle className="text-sm font-medium">{cm.componentName}</CardTitle>
                               </CardHeader>
                               <CardContent className="pt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {Object.entries(slotMappings)
                               .filter(([_, modelPath]) => {
                                 // Filter out invalid mappings (null, undefined, or non-string objects)
@@ -423,31 +432,33 @@ export default function Home() {
                                   : String(displayPath ?? "(invalid mapping)");
                                 
                                 return (
-                                        <div
-                                          key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
+                                  <div
+                                    key={`${mapping.pageName}-${cm.componentName}-${slot}-${slotIndex}`}
                                           className="text-sm"
-                                        >
-                                          <span className="font-medium">{slot}</span> →{" "}
+                                  >
+                                    <span className="font-medium">{slot}</span> →{" "}
                                           <Badge variant="outline" className="font-mono text-xs">
-                                            {safeDisplayPath}
+                                      {safeDisplayPath}
                                           </Badge>
-                                        </div>
+                                  </div>
                                 );
                               })}
                           </div>
                               </CardContent>
                             </Card>
-                            );
-                          })}
-                        </div>
+                        );
+                      })}
+                    </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               </CardContent>
             </Card>
+            </div>
 
             {/* Content Models */}
+            <div className="container mx-auto px-4 max-w-[1440px]">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -473,17 +484,19 @@ export default function Home() {
                             >
                               <span className="font-medium">{field.name}:</span>{" "}
                               <Badge variant="outline" className="text-xs">{field.type}</Badge>
-                            </div>
-                          ))}
-                        </div>
+                  </div>
+                ))}
+              </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               </CardContent>
             </Card>
+            </div>
 
             {/* UI Components */}
+            <div className="container mx-auto px-4 max-w-[1440px]">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -521,24 +534,26 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-
+            </div>
 
             {/* Screenshot */}
             {state.analysis.metadata.screenshotPath && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Screenshot</CardTitle>
-                </CardHeader>
-                <CardContent>
+              <div className="container mx-auto px-4 max-w-[1440px]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Screenshot</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                 <img
                   src={state.analysis.metadata.screenshotPath}
                   alt="Website screenshot"
-                    className="rounded-lg border w-full"
+                      className="rounded-lg border w-full"
                 />
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             )}
-          </div>
+          </>
         )}
       </main>
     </div>

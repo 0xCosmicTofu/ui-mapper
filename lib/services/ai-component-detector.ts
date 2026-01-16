@@ -325,7 +325,7 @@ Focus on reusable components with clear slots. Return ONLY valid JSON.`;
                 'x-ratelimit-remaining': modelsTestResponse.headers['x-ratelimit-remaining'],
                 'x-venice-balance-usd': modelsTestResponse.headers['x-venice-balance-usd'],
                 'x-venice-balance-diem': modelsTestResponse.headers['x-venice-balance-diem'],
-              },
+                },
               timestamp: new Date().toISOString(),
               hypothesisId: "U",
             });
@@ -784,7 +784,7 @@ Focus on reusable components with clear slots. Return ONLY valid JSON.`;
       } else {
         // Fallback: remove markdown code block markers if present
         cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        
+      
         // If there's still extra content after the JSON, try to extract just the JSON
         // Find the first complete JSON array or object
         const jsonArrayMatch = cleanedJson.match(/^(\[[\s\S]*\])/);
@@ -874,7 +874,7 @@ Focus on reusable components with clear slots. Return ONLY valid JSON.`;
           try {
             if (typeof response.data === 'string') {
               errorDetails.responseDataString = response.data;
-              try {
+        try {
                 errorDetails.responseDataParsed = JSON.parse(response.data);
               } catch (e) {
                 errorDetails.responseDataRaw = response.data;
@@ -1018,8 +1018,8 @@ Requirements:
           {
             role: "user" as const,
             content: messageContent,
-          },
-        ],
+        },
+      ],
         response_format: { type: "json_object" as const },
       };
 

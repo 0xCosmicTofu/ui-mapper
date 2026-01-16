@@ -86,14 +86,14 @@ export class WebflowExporter {
             // Handle different types of modelPath
             if (typeof modelPath === "string") {
               // Handle string paths normally
-              const [modelName, ...fieldPath] = modelPath.split(".");
-              const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, ""); // Remove array indices
-              
-              const collection = collections.find((c) => c.name === modelName);
-              if (collection) {
-                const field = collection.fields.find((f) => f.name === fieldName);
-                if (field) {
-                  bindings[slotName] = `${collection.slug}.${field.slug}`;
+            const [modelName, ...fieldPath] = modelPath.split(".");
+            const fieldName = fieldPath.join(".").replace(/\[\d*\]/g, ""); // Remove array indices
+            
+            const collection = collections.find((c) => c.name === modelName);
+            if (collection) {
+              const field = collection.fields.find((f) => f.name === fieldName);
+              if (field) {
+                bindings[slotName] = `${collection.slug}.${field.slug}`;
                 }
               }
             } else if (modelPath === null || modelPath === undefined) {
@@ -261,9 +261,9 @@ export class WebflowExporter {
         // #endregion
         
         const [modelName] = pathToProcess.split(".");
-        const collection = collections.find((c) => c.name === modelName);
-        if (collection) {
-          collectionCounts[collection.slug] = (collectionCounts[collection.slug] || 0) + 1;
+      const collection = collections.find((c) => c.name === modelName);
+      if (collection) {
+        collectionCounts[collection.slug] = (collectionCounts[collection.slug] || 0) + 1;
         }
       }
     });
