@@ -1,7 +1,13 @@
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
-import { prisma } from "./lib/prisma";
 import { getEnv } from "./lib/utils/env";
+
+// Lazy-load Prisma to avoid Edge runtime issues in middleware
+// Prisma doesn't work in Edge runtime, so we only import it when needed (in callbacks)
+const getPrisma = async () => {
+  const { prisma } = await import("./lib/prisma");
+  return prisma;
+};
 
 // Note: We're using JWT sessions, so we don't need PrismaAdapter for middleware
 // The adapter is only needed for OAuth account linking, which happens in API routes
@@ -59,6 +65,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // #endregion
         
         try {
+          const prisma = await getPrisma();
+          
           // Check if account already exists
           const existingAccount = await prisma.account.findUnique({
             where: {
