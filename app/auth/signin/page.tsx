@@ -65,14 +65,20 @@ function SignInForm() {
     setError(null);
     
     try {
+      // Force callbackUrl to '/' for OAuth to prevent redirect loops
+      // Even if the user was redirected here with a different callbackUrl,
+      // we always want to go to home after OAuth completes
+      const oauthCallbackUrl = '/';
+      
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:before-signin',message:'Calling signIn with redirect true',data:{callbackUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H2'})}).catch(()=>{});
+      console.log('[OAUTH-SIGNIN] Calling signIn with forced callbackUrl="/"', { originalCallbackUrl: callbackUrl });
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:before-signin',message:'Calling signIn with forced callbackUrl',data:{originalCallbackUrl:callbackUrl,oauthCallbackUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H2'})}).catch(()=>{});
       // #endregion
       
       // For OAuth providers, redirect: false is not supported in NextAuth v5
       // We must let NextAuth handle the redirect automatically
-      // The redirect callback in auth.ts will handle where to send the user after OAuth completes
-      await signIn("google", { callbackUrl });
+      // Always use '/' as callbackUrl to prevent redirect loops
+      await signIn("google", { callbackUrl: oauthCallbackUrl });
       
       // Note: signIn with OAuth will redirect the page, so code below won't execute
       // If we reach here, there was an error
