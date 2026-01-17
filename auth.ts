@@ -221,8 +221,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async redirect({ url, baseUrl }) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:{url,baseUrl,isRelative:url.startsWith('/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:{url,baseUrl,isRelative:url.startsWith('/'),isAuthPage:url.includes('/auth/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
       // #endregion
+      
+      // Prevent redirecting back to auth pages after successful OAuth
+      // If the callback URL is an auth page, redirect to home instead
+      if (url.includes('/auth/signin') || url.includes('/auth/signup')) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:prevent-auth-page',message:'Preventing redirect to auth page, using home instead',data:{originalUrl:url,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+        // #endregion
+        return baseUrl;
+      }
       
       // Handle relative URLs
       if (url.startsWith('/')) {
