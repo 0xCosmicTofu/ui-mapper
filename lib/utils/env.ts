@@ -26,3 +26,21 @@ export function getEnvBool(key: string, defaultValue: boolean = false): boolean 
   return ['true', '1', 'yes'].includes(value.toLowerCase());
 }
 
+/**
+ * Validates that all required environment variables are present
+ * Throws an error if any required variables are missing
+ * 
+ * @param required - Array of required environment variable keys
+ * @throws Error if any required variables are missing
+ */
+export function validateEnv(required: string[] = ['AUTH_SECRET', 'DATABASE_URL']): void {
+  const missing = required.filter(key => !process.env[key] || process.env[key]?.trim() === '');
+  
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}\n` +
+      `Please check your .env file or environment configuration.`
+    );
+  }
+}
+
