@@ -58,25 +58,38 @@ function SignInForm() {
 
   const handleGoogleSignIn = async () => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:45',message:'Google sign in initiated',data:{callbackUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:entry',message:'Google sign in button clicked',data:{callbackUrl,hasCallbackUrl:!!callbackUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
     
     setIsLoading(true);
     setError(null);
     
     try {
+      // #region agent log
+      const signInStartTime = Date.now();
+      // #endregion
       const result = await signIn("google", { callbackUrl, redirect: false });
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:52',message:'Google sign in result',data:{hasError:!!result?.error,error:result?.error,hasUrl:!!result?.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      const signInDuration = Date.now() - signInStartTime;
+      const resultUrl = result?.url || '';
+      const isGoogleOAuthUrl = resultUrl.includes('accounts.google.com');
+      const urlPreview = resultUrl ? resultUrl.substring(0, 200) : '';
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:result',message:'signIn result received',data:{hasError:!!result?.error,error:result?.error,hasUrl:!!result?.url,urlLength:resultUrl.length,isGoogleOAuthUrl,urlPreview,signInDuration,resultKeys:Object.keys(result || {})},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H2'})}).catch(()=>{});
       // #endregion
       
       if (result?.error) {
         setError(result.error);
         setIsLoading(false);
       } else if (result?.url) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:redirect',message:'Redirecting to OAuth URL',data:{url:resultUrl,isGoogleOAuthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         window.location.href = result.url;
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:no-url',message:'No URL returned, redirecting to callback',data:{callbackUrl,hasResult:!!result},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
         router.push(callbackUrl);
         router.refresh();
       }

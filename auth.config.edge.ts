@@ -13,6 +13,11 @@ const googleProvider = googleClientId && googleClientSecret
   ? Google({
       clientId: googleClientId,
       clientSecret: googleClientSecret,
+      authorization: {
+        params: {
+          prompt: "select_account", // Force Google to show account selection screen
+        },
+      },
     })
   : null;
 
