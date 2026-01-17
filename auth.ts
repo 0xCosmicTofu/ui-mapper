@@ -204,76 +204,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // #region agent log
-      const logData = {url,baseUrl,isRelative:url.startsWith('/'),isAuthPage:url.includes('/auth/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false};
-      console.log('[OAUTH-REDIRECT] Redirect callback invoked', logData);
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H22'})}).catch(()=>{});
-      // #endregion
+      console.log('[OAUTH-REDIRECT] Redirect callback', { url, baseUrl });
       
-      // Normalize URL to handle query params and fragments
-      let normalizedUrl = url;
-      try {
-        const urlObj = new URL(url, baseUrl);
-        normalizedUrl = urlObj.pathname + urlObj.search;
-      } catch (e) {
-        // If URL parsing fails, use as-is
-      }
-      
-      // Prevent redirecting back to auth pages after successful OAuth
-      // Check both the original URL and normalized pathname
-      if (normalizedUrl.includes('/auth/signin') || 
-          normalizedUrl.includes('/auth/signup') || 
-          url.includes('/auth/signin') || 
-          url.includes('/auth/signup')) {
-        // #region agent log
-        const preventData = {originalUrl:url,normalizedUrl,redirectUrl:baseUrl};
-        console.log('[OAUTH-REDIRECT] Preventing redirect to auth page, using home instead', preventData);
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:prevent-auth-page',message:'Preventing redirect to auth page, using home instead',data:preventData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H23'})}).catch(()=>{});
-        // #endregion
+      // SIMPLIFIED: Always redirect to home after OAuth to prevent loops
+      // If URL contains /auth/signin or /auth/signup, force to home
+      if (url.includes('/auth/signin') || url.includes('/auth/signup')) {
+        console.log('[OAUTH-REDIRECT] Blocking redirect to auth page, forcing to home');
         return baseUrl;
       }
       
-      // Handle relative URLs
-      if (url.startsWith('/')) {
-        // Ensure relative URLs don't point to auth pages
-        if (url.startsWith('/auth/') && !url.startsWith('/auth/error')) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:relative-auth-blocked',message:'Blocking relative URL to auth page',data:{url,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H24'})}).catch(()=>{});
-          // #endregion
-          return baseUrl;
-        }
-        const redirectUrl = `${baseUrl}${url}`;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:relative',message:'Redirecting to relative URL',data:{redirectUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H25'})}).catch(()=>{});
-        // #endregion
-        return redirectUrl;
+      // For relative URLs, check if they're auth pages
+      if (url.startsWith('/') && (url.startsWith('/auth/') && !url.startsWith('/auth/error'))) {
+        console.log('[OAUTH-REDIRECT] Blocking relative auth URL, forcing to home');
+        return baseUrl;
       }
-      // Handle absolute URLs from the same origin
+      
+      // For absolute URLs, check if same origin and not auth page
       if (url.startsWith('http')) {
         try {
           const urlObj = new URL(url);
           if (urlObj.origin === baseUrl) {
-            // Check if absolute URL points to auth page
             if (urlObj.pathname.startsWith('/auth/') && !urlObj.pathname.startsWith('/auth/error')) {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:absolute-auth-blocked',message:'Blocking absolute URL to auth page',data:{url,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H26'})}).catch(()=>{});
-              // #endregion
+              console.log('[OAUTH-REDIRECT] Blocking absolute auth URL, forcing to home');
               return baseUrl;
             }
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:absolute-same-origin',message:'Redirecting to same-origin absolute URL',data:{redirectUrl:url},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H27'})}).catch(()=>{});
-            // #endregion
             return url;
           }
-        } catch (e) {}
+        } catch (e) {
+          // Invalid URL, fall through to default
+        }
       }
-      // Default to base URL (home page)
-      // After OAuth, always redirect to home to prevent loops
-      // #region agent log
-      const defaultData = {redirectUrl:baseUrl,originalUrl:url};
-      console.log('[OAUTH-REDIRECT] Redirecting to base URL (default)', defaultData);
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:default',message:'Redirecting to base URL (default)',data:defaultData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H28'})}).catch(()=>{});
-      // #endregion
+      
+      // For relative URLs that aren't auth pages, construct full URL
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // Default: always go to home
+      console.log('[OAUTH-REDIRECT] Default redirect to home');
       return baseUrl;
     },
   },

@@ -56,23 +56,21 @@ export default async function middleware(req: NextRequest) {
   
   // Protect all other routes - require authentication
   if (!session) {
-    // Special case: If we're coming from OAuth callback but session isn't ready yet,
-    // check if we have a session token cookie. If so, allow through (session will be available on next request)
-    // This prevents the redirect loop when OAuth callback completes but session isn't immediately available
-    if (isFromOAuthCallback && sessionTokenCookie) {
-      // #region agent log
-      const allowData = {pathname,sessionTokenPresent:!!sessionTokenCookie};
-      console.log('[MIDDLEWARE] Allowing request from OAuth callback with session token cookie', allowData);
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:oauth-callback-session-token',message:'Allowing request from OAuth callback with session token cookie',data:allowData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H31'})}).catch(()=>{});
-      // #endregion
+    // CRITICAL FIX: If we have a session token cookie, allow the request through
+    // This handles the case where OAuth just completed and set the cookie,
+    // but auth() hasn't validated it yet (timing issue)
+    if (sessionTokenCookie) {
+      console.log('[MIDDLEWARE] No session but session token cookie present, allowing through', { pathname });
       return NextResponse.next();
     }
     
-    // #region agent log
-    const redirectData = {pathname,callbackUrl:pathname,isFromOAuthCallback,sessionTokenPresent:!!sessionTokenCookie};
-    console.log('[MIDDLEWARE] Redirecting unauthenticated user to signin', redirectData);
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:redirect-unauthenticated',message:'Redirecting unauthenticated user to signin',data:redirectData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H32'})}).catch(()=>{});
-    // #endregion
+    // Also allow if coming from OAuth callback (referer check)
+    if (isFromOAuthCallback) {
+      console.log('[MIDDLEWARE] Allowing request from OAuth callback', { pathname, referer });
+      return NextResponse.next();
+    }
+    
+    console.log('[MIDDLEWARE] No session, redirecting to signin', { pathname });
     const signInUrl = new URL('/auth/signin', req.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
