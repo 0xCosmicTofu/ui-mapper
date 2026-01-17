@@ -66,36 +66,19 @@ function SignInForm() {
     
     try {
       // #region agent log
-      const signInStartTime = Date.now();
-      // #endregion
-      const result = await signIn("google", { callbackUrl, redirect: false });
-      
-      // #region agent log
-      const signInDuration = Date.now() - signInStartTime;
-      const resultUrl = result?.url || '';
-      const isGoogleOAuthUrl = resultUrl.includes('accounts.google.com');
-      const urlPreview = resultUrl ? resultUrl.substring(0, 200) : '';
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:result',message:'signIn result received',data:{hasError:!!result?.error,error:result?.error,hasUrl:!!result?.url,urlLength:resultUrl.length,isGoogleOAuthUrl,urlPreview,signInDuration,resultKeys:Object.keys(result || {})},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H2'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:before-signin',message:'Calling signIn with redirect true',data:{callbackUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H2'})}).catch(()=>{});
       // #endregion
       
-      if (result?.error) {
-        setError(result.error);
-        setIsLoading(false);
-      } else if (result?.url) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:redirect',message:'Redirecting to OAuth URL',data:{url:resultUrl,isGoogleOAuthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
-        window.location.href = result.url;
-      } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:no-url',message:'No URL returned, redirecting to callback',data:{callbackUrl,hasResult:!!result},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H4'})}).catch(()=>{});
-        // #endregion
-        router.push(callbackUrl);
-        router.refresh();
-      }
+      // For OAuth providers, redirect: false is not supported in NextAuth v5
+      // We must let NextAuth handle the redirect automatically
+      // The redirect callback in auth.ts will handle where to send the user after OAuth completes
+      await signIn("google", { callbackUrl });
+      
+      // Note: signIn with OAuth will redirect the page, so code below won't execute
+      // If we reach here, there was an error
     } catch (err) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/49e422d6-0a8f-4606-8d39-4bacbfb71f98',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:65',message:'Google sign in exception',data:{error:err instanceof Error ? err.message : String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/signin/page.tsx:handleGoogleSignIn:error',message:'Google sign in exception',data:{error:err instanceof Error ? err.message : String(err),errorStack:err instanceof Error ? err.stack?.split('\n').slice(0,3).join('\n') : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       
       setError("An error occurred. Please try again.");
