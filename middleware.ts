@@ -31,7 +31,13 @@ export default async function middleware(req: NextRequest) {
   const isApiRoute = pathname.startsWith('/api');
   
   // #region agent log
-  const sessionTokenCookie = cookieHeader.split(';').find(c => c.includes('authjs.session-token') || c.includes('next-auth.session-token'));
+  // Check for session token cookie with both production (__Secure-) and development names
+  const sessionTokenCookie = cookieHeader.split(';').find(c => 
+    c.includes('authjs.session-token') || 
+    c.includes('next-auth.session-token') ||
+    c.includes('__Secure-authjs.session-token') ||
+    c.includes('__Secure-next-auth.session-token')
+  );
   const sessionTokenValue = sessionTokenCookie ? sessionTokenCookie.split('=')[1]?.substring(0, 20) + '...' : 'none';
   fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:middleware',message:'Middleware check',data:{pathname,hasSession,sessionUserId,sessionUserEmail,sessionDuration,isAuthPage,isPublicRoute,isApiRoute,authCookiesCount:authCookies.length,authCookies,sessionTokenPresent:!!sessionTokenCookie,sessionTokenValue,isFromOAuthCallback,referer},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H29'})}).catch(()=>{});
   // #endregion
@@ -55,13 +61,17 @@ export default async function middleware(req: NextRequest) {
     // This prevents the redirect loop when OAuth callback completes but session isn't immediately available
     if (isFromOAuthCallback && sessionTokenCookie) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:oauth-callback-session-token',message:'Allowing request from OAuth callback with session token cookie',data:{pathname,sessionTokenPresent:!!sessionTokenCookie},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H31'})}).catch(()=>{});
+      const allowData = {pathname,sessionTokenPresent:!!sessionTokenCookie};
+      console.log('[MIDDLEWARE] Allowing request from OAuth callback with session token cookie', allowData);
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:oauth-callback-session-token',message:'Allowing request from OAuth callback with session token cookie',data:allowData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H31'})}).catch(()=>{});
       // #endregion
       return NextResponse.next();
     }
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:redirect-unauthenticated',message:'Redirecting unauthenticated user to signin',data:{pathname,callbackUrl:pathname,isFromOAuthCallback,sessionTokenPresent:!!sessionTokenCookie},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H32'})}).catch(()=>{});
+    const redirectData = {pathname,callbackUrl:pathname,isFromOAuthCallback,sessionTokenPresent:!!sessionTokenCookie};
+    console.log('[MIDDLEWARE] Redirecting unauthenticated user to signin', redirectData);
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:redirect-unauthenticated',message:'Redirecting unauthenticated user to signin',data:redirectData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H32'})}).catch(()=>{});
     // #endregion
     const signInUrl = new URL('/auth/signin', req.url);
     signInUrl.searchParams.set('callbackUrl', pathname);

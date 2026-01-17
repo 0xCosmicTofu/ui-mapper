@@ -98,7 +98,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             
             user.id = existingAccount.userId;
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-existing',message:'signIn returning true for existing account',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H16'})}).catch(()=>{});
+            const returnData = {userId:user.id};
+            console.log('[OAUTH-SIGNIN] signIn returning true for existing account', returnData);
+            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-existing',message:'signIn returning true for existing account',data:returnData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H16'})}).catch(()=>{});
             // #endregion
             return true;
           }
@@ -148,13 +150,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.id = dbUser.id;
           
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-new',message:'signIn returning true for new account',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H19'})}).catch(()=>{});
+          const returnDataNew = {userId:user.id};
+          console.log('[OAUTH-SIGNIN] signIn returning true for new account', returnDataNew);
+          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-new',message:'signIn returning true for new account',data:returnDataNew,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H19'})}).catch(()=>{});
           // #endregion
           
           return true;
         } catch (error) {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:error',message:'OAuth signIn error',data:{error:error instanceof Error ? error.message : String(error),errorStack:error instanceof Error ? error.stack?.split('\n').slice(0,3).join('\n') : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H20'})}).catch(()=>{});
+          const errorData = {error:error instanceof Error ? error.message : String(error),errorStack:error instanceof Error ? error.stack?.split('\n').slice(0,3).join('\n') : undefined};
+          console.error('[OAUTH-SIGNIN] OAuth signIn error:', errorData);
+          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:error',message:'OAuth signIn error',data:errorData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H20'})}).catch(()=>{});
           // #endregion
           
           console.error("OAuth signIn error:", error);
@@ -199,7 +205,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async redirect({ url, baseUrl }) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:{url,baseUrl,isRelative:url.startsWith('/'),isAuthPage:url.includes('/auth/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H22'})}).catch(()=>{});
+      const logData = {url,baseUrl,isRelative:url.startsWith('/'),isAuthPage:url.includes('/auth/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false};
+      console.log('[OAUTH-REDIRECT] Redirect callback invoked', logData);
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H22'})}).catch(()=>{});
       // #endregion
       
       // Normalize URL to handle query params and fragments
@@ -218,7 +226,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           url.includes('/auth/signin') || 
           url.includes('/auth/signup')) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:prevent-auth-page',message:'Preventing redirect to auth page, using home instead',data:{originalUrl:url,normalizedUrl,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H23'})}).catch(()=>{});
+        const preventData = {originalUrl:url,normalizedUrl,redirectUrl:baseUrl};
+        console.log('[OAUTH-REDIRECT] Preventing redirect to auth page, using home instead', preventData);
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:prevent-auth-page',message:'Preventing redirect to auth page, using home instead',data:preventData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H23'})}).catch(()=>{});
         // #endregion
         return baseUrl;
       }
@@ -258,8 +268,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } catch (e) {}
       }
       // Default to base URL (home page)
+      // After OAuth, always redirect to home to prevent loops
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:default',message:'Redirecting to base URL (default)',data:{redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H28'})}).catch(()=>{});
+      const defaultData = {redirectUrl:baseUrl,originalUrl:url};
+      console.log('[OAUTH-REDIRECT] Redirecting to base URL (default)', defaultData);
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:default',message:'Redirecting to base URL (default)',data:defaultData,timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H28'})}).catch(()=>{});
       // #endregion
       return baseUrl;
     },
