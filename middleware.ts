@@ -1,11 +1,33 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
-
-// Middleware disabled - authentication removed for testing
-// Removed experimental-edge runtime to avoid dev server issues
+import { auth } from "./auth";
 
 export default async function middleware(req: NextRequest) {
-  // No authentication checks - all routes are public
+  const session = await auth();
+  const { pathname } = req.nextUrl;
+  
+  // Public routes that don't require authentication
+  const publicRoutes = ['/auth/signin', '/auth/signup', '/auth/error'];
+  const isAuthPage = pathname.startsWith('/auth');
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isApiRoute = pathname.startsWith('/api');
+  
+  // Allow public routes and API routes (API routes handle their own auth)
+  if (isPublicRoute || isApiRoute) {
+    // If authenticated user tries to access auth pages, redirect to home
+    if (session && isAuthPage && pathname !== '/auth/error') {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+    return NextResponse.next();
+  }
+  
+  // Protect all other routes - require authentication
+  if (!session) {
+    const signInUrl = new URL('/auth/signin', req.url);
+    signInUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(signInUrl);
+  }
+  
   return NextResponse.next();
 }
 
