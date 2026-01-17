@@ -1,8 +1,14 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { getEnv, getEnvBool } from "./lib/utils/env";
+
+// Lazy-load bcrypt to avoid Edge runtime issues in middleware
+// bcrypt is a Node.js native module that doesn't work in Edge runtime
+const bcryptCompare = async (password: string, hash: string): Promise<boolean> => {
+  const bcrypt = await import("bcryptjs");
+  return bcrypt.compare(password, hash);
+};
 
 // Gate debug logging
 const isDebug = getEnvBool("DEBUG_LOGGING", false);
@@ -110,7 +116,7 @@ export default {
           return null;
         }
 
-        const isPasswordValid = await bcrypt.compare(
+        const isPasswordValid = await bcryptCompare(
           credentials.password as string,
           user.password
         );
