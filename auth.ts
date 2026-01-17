@@ -41,27 +41,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     // #region agent log
     async signIn({ user, account, profile }) {
-      console.log("[DEBUG] signIn callback invoked", {
-        location: "auth.ts:signIn",
-        hasUser: !!user,
-        hasAccount: !!account,
-        provider: account?.provider,
-        userEmail: user?.email,
-        timestamp: new Date().toISOString(),
-        hypothesisId: "D",
-      });
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:entry',message:'signIn callback invoked',data:{hasUser:!!user,hasAccount:!!account,provider:account?.provider,userEmail:user?.email,userId:user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H13'})}).catch(()=>{});
       // #endregion
       
       // Handle OAuth providers (Google, etc.)
       if (account && account.provider !== "credentials") {
         // #region agent log
-        console.log("[DEBUG] OAuth provider detected", {
-          location: "auth.ts:signIn:OAuth",
-          provider: account.provider,
-          providerAccountId: account.providerAccountId,
-          timestamp: new Date().toISOString(),
-          hypothesisId: "D",
-        });
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:oauth-detected',message:'OAuth provider detected',data:{provider:account.provider,providerAccountId:account.providerAccountId},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H14'})}).catch(()=>{});
         // #endregion
         
         try {
@@ -80,12 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (existingAccount) {
             // #region agent log
-            console.log("[DEBUG] Existing OAuth account found", {
-              location: "auth.ts:signIn:existingAccount",
-              userId: existingAccount.userId,
-              timestamp: new Date().toISOString(),
-              hypothesisId: "D",
-            });
+            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:existing-account',message:'Existing OAuth account found',data:{userId:existingAccount.userId},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H15'})}).catch(()=>{});
             // #endregion
             
             // Update account tokens
@@ -103,6 +84,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             });
             
             user.id = existingAccount.userId;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-existing',message:'signIn returning true for existing account',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H16'})}).catch(()=>{});
+            // #endregion
             return true;
           }
 
@@ -113,12 +97,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!dbUser) {
             // #region agent log
-            console.log("[DEBUG] Creating new OAuth user", {
-              location: "auth.ts:signIn:createUser",
-              email: user.email,
-              timestamp: new Date().toISOString(),
-              hypothesisId: "D",
-            });
+            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:create-user',message:'Creating new OAuth user',data:{email:user.email},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H17'})}).catch(()=>{});
             // #endregion
             
             // Create new user
@@ -133,13 +112,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           // #region agent log
-          console.log("[DEBUG] Creating OAuth account link", {
-            location: "auth.ts:signIn:createAccount",
-            userId: dbUser.id,
-            provider: account.provider,
-            timestamp: new Date().toISOString(),
-            hypothesisId: "D",
-          });
+          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:create-account',message:'Creating OAuth account link',data:{userId:dbUser.id,provider:account.provider},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H18'})}).catch(()=>{});
           // #endregion
           
           // Create account link
@@ -162,24 +135,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.id = dbUser.id;
           
           // #region agent log
-          console.log("[DEBUG] OAuth signIn completed successfully", {
-            location: "auth.ts:signIn:success",
-            userId: user.id,
-            timestamp: new Date().toISOString(),
-            hypothesisId: "D",
-          });
+          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-new',message:'signIn returning true for new account',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H19'})}).catch(()=>{});
           // #endregion
           
           return true;
         } catch (error) {
           // #region agent log
-          console.error("[DEBUG] OAuth signIn error", {
-            location: "auth.ts:signIn:error",
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            timestamp: new Date().toISOString(),
-            hypothesisId: "D",
-          });
+          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:error',message:'OAuth signIn error',data:{error:error instanceof Error ? error.message : String(error),errorStack:error instanceof Error ? error.stack?.split('\n').slice(0,3).join('\n') : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H20'})}).catch(()=>{});
           // #endregion
           
           console.error("OAuth signIn error:", error);
@@ -188,6 +150,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       // For credentials provider, allow sign in
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:signIn:return-true-credentials',message:'signIn returning true for credentials',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H21'})}).catch(()=>{});
+      // #endregion
       return true;
     },
     // #endregion

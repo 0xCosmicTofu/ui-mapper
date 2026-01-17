@@ -69,6 +69,11 @@ export const GET = async (req: NextRequest) => {
     const setCookieHeader = response?.headers?.get('set-cookie') || '';
     const setCookieParts = setCookieHeader.split(',').map(part => part.trim());
     const sessionCookies = setCookieParts.filter(c => c.includes('authjs.session-token') || c.includes('next-auth.session-token'));
+    const sessionTokenCookies = setCookieParts.filter(c => c.includes('session-token'));
+    const sessionTokenValues = sessionTokenCookies.map(c => {
+      const match = c.match(/session-token=([^;]+)/);
+      return match ? match[1].substring(0, 20) + '...' : '';
+    });
     let oauthRedirectUri = '';
     let oauthClientId = '';
     let oauthState = '';
@@ -84,7 +89,8 @@ export const GET = async (req: NextRequest) => {
     }
     const isRedirectToHome = redirectLocation === '/' || redirectLocation.startsWith('/?');
     const isRedirectToSignIn = redirectLocation.includes('/auth/signin');
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET handler response',data:{status:responseStatus,statusText:response?.statusText,hasHeaders:!!response?.headers,redirectLocation,handlerDuration,responsePreview:responseText?.substring(0,200),isErrorRedirect,errorFromUrl:isErrorRedirect ? new URL(redirectLocation).searchParams.get('error') : null,allHeaders:Object.keys(allHeaders),authCookiesCount:authCookies.length,authCookies,setCookieHeaderPresent:!!setCookieHeader,setCookieCount:setCookieParts.length,sessionCookiesCount:sessionCookies.length,isGoogleOAuth:redirectLocation.includes('accounts.google.com'),oauthRedirectUri,oauthRedirectUriMatches:oauthRedirectUri === expectedCallbackUrl,expectedCallbackUrl,oauthClientIdMasked:oauthClientId ? `${oauthClientId.substring(0,8)}...${oauthClientId.length}chars` : '',oauthClientIdLength:oauthClientId?.length || 0,hasOauthState:!!oauthState,promptParam,isCallback,hasCode:!!code,isRedirectToHome,isRedirectToSignIn},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H5'})}).catch(()=>{});
+    const isRedirectToCallback = redirectLocation.includes('/api/auth/callback');
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET handler response',data:{status:responseStatus,statusText:response?.statusText,hasHeaders:!!response?.headers,redirectLocation,handlerDuration,responsePreview:responseText?.substring(0,200),isErrorRedirect,errorFromUrl:isErrorRedirect ? new URL(redirectLocation).searchParams.get('error') : null,allHeaders:Object.keys(allHeaders),authCookiesCount:authCookies.length,authCookies,setCookieHeaderPresent:!!setCookieHeader,setCookieCount:setCookieParts.length,sessionCookiesCount:sessionCookies.length,sessionTokenCookiesCount:sessionTokenCookies.length,sessionTokenValues,isGoogleOAuth:redirectLocation.includes('accounts.google.com'),oauthRedirectUri,oauthRedirectUriMatches:oauthRedirectUri === expectedCallbackUrl,expectedCallbackUrl,oauthClientIdMasked:oauthClientId ? `${oauthClientId.substring(0,8)}...${oauthClientId.length}chars` : '',oauthClientIdLength:oauthClientId?.length || 0,hasOauthState:!!oauthState,promptParam,isCallback,hasCode:!!code,isRedirectToHome,isRedirectToSignIn,isRedirectToCallback},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H11'})}).catch(()=>{});
     // #endregion
     return response;
   } catch (error) {
