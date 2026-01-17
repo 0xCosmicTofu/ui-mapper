@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
-import { auth } from "./auth";
+import NextAuth from "next-auth";
+import authConfig from "./auth.config.edge";
+
+// Create Edge-safe auth function for middleware
+// This avoids importing the full auth.ts which has Prisma/bcrypt dependencies
+const { auth } = NextAuth(authConfig);
 
 export default async function middleware(req: NextRequest) {
   const session = await auth();
