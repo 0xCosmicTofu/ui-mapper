@@ -38,6 +38,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: getEnv("AUTH_SECRET"),
   ...authConfig,
   debug: process.env.NODE_ENV === "development", // NODE_ENV is standard, no trim needed
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === "production" 
+        ? "__Secure-authjs.session-token" 
+        : "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   callbacks: {
     // #region agent log
     async signIn({ user, account, profile }) {
@@ -186,23 +199,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async redirect({ url, baseUrl }) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:{url,baseUrl,isRelative:url.startsWith('/'),isAuthPage:url.includes('/auth/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect',message:'Redirect callback invoked',data:{url,baseUrl,isRelative:url.startsWith('/'),isAuthPage:url.includes('/auth/'),isSameOrigin:url.startsWith('http') ? new URL(url).origin === baseUrl : false},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H22'})}).catch(()=>{});
       // #endregion
       
+      // Normalize URL to handle query params and fragments
+      let normalizedUrl = url;
+      try {
+        const urlObj = new URL(url, baseUrl);
+        normalizedUrl = urlObj.pathname + urlObj.search;
+      } catch (e) {
+        // If URL parsing fails, use as-is
+      }
+      
       // Prevent redirecting back to auth pages after successful OAuth
-      // If the callback URL is an auth page, redirect to home instead
-      if (url.includes('/auth/signin') || url.includes('/auth/signup')) {
+      // Check both the original URL and normalized pathname
+      if (normalizedUrl.includes('/auth/signin') || 
+          normalizedUrl.includes('/auth/signup') || 
+          url.includes('/auth/signin') || 
+          url.includes('/auth/signup')) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:prevent-auth-page',message:'Preventing redirect to auth page, using home instead',data:{originalUrl:url,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:prevent-auth-page',message:'Preventing redirect to auth page, using home instead',data:{originalUrl:url,normalizedUrl,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H23'})}).catch(()=>{});
         // #endregion
         return baseUrl;
       }
       
       // Handle relative URLs
       if (url.startsWith('/')) {
+        // Ensure relative URLs don't point to auth pages
+        if (url.startsWith('/auth/') && !url.startsWith('/auth/error')) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:relative-auth-blocked',message:'Blocking relative URL to auth page',data:{url,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H24'})}).catch(()=>{});
+          // #endregion
+          return baseUrl;
+        }
         const redirectUrl = `${baseUrl}${url}`;
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:relative',message:'Redirecting to relative URL',data:{redirectUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:relative',message:'Redirecting to relative URL',data:{redirectUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H25'})}).catch(()=>{});
         // #endregion
         return redirectUrl;
       }
@@ -211,8 +243,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const urlObj = new URL(url);
           if (urlObj.origin === baseUrl) {
+            // Check if absolute URL points to auth page
+            if (urlObj.pathname.startsWith('/auth/') && !urlObj.pathname.startsWith('/auth/error')) {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:absolute-auth-blocked',message:'Blocking absolute URL to auth page',data:{url,redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H26'})}).catch(()=>{});
+              // #endregion
+              return baseUrl;
+            }
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:absolute-same-origin',message:'Redirecting to same-origin absolute URL',data:{redirectUrl:url},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:absolute-same-origin',message:'Redirecting to same-origin absolute URL',data:{redirectUrl:url},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H27'})}).catch(()=>{});
             // #endregion
             return url;
           }
@@ -220,7 +259,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       // Default to base URL (home page)
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:default',message:'Redirecting to base URL (default)',data:{redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-flow-trace',hypothesisId:'H10'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:default',message:'Redirecting to base URL (default)',data:{redirectUrl:baseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H28'})}).catch(()=>{});
       // #endregion
       return baseUrl;
     },
