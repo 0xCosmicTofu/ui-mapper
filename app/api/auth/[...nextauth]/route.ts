@@ -47,30 +47,52 @@ export const GET = async (req: NextRequest) => {
     const setCookieHeaders = response?.headers?.get('set-cookie') || '';
     const hasSessionCookie = setCookieHeaders.includes('session-token');
     
-    // CRITICAL: Check if redirectLocation contains OAuth callback URL
+    // CRITICAL: Extract redirect_uri from OAuth authorization URL
     const isOAuthRedirect = redirectLocation && (redirectLocation.includes('accounts.google.com') || redirectLocation.includes('oauth'));
-    const callbackUrlInRedirect = isOAuthRedirect && redirectLocation ? (() => {
+    let redirectUri = null;
+    let decodedRedirectUri = null;
+    
+    if (isOAuthRedirect && redirectLocation) {
       try {
         const url = new URL(redirectLocation);
-        return url.searchParams.get('redirect_uri') || url.searchParams.get('callback_uri') || null;
-      } catch {
-        return null;
+        redirectUri = url.searchParams.get('redirect_uri');
+        if (redirectUri) {
+          // redirect_uri is URL-encoded, decode it to show the actual callback URL
+          decodedRedirectUri = decodeURIComponent(redirectUri);
+        }
+      } catch (e) {
+        console.error('[NEXTAUTH-GET-RESPONSE] Error parsing redirect URL', e);
       }
-    })() : null;
+    }
+    
+    // Also check if this is a callback request (coming back from Google)
+    const isCallbackRequest = pathname.includes('callback');
+    const callbackError = req.nextUrl.searchParams.get('error');
+    const callbackErrorDescription = req.nextUrl.searchParams.get('error_description');
     
     console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {
       status,
-      redirectLocation,
-      isErrorRedirect,
+      pathname,
+      isCallbackRequest,
+      callbackError,
+      callbackErrorDescription,
+      redirectLocation: redirectLocation ? redirectLocation.substring(0, 200) : null, // Truncate for readability
       isOAuthRedirect,
-      callbackUrlInRedirect,
+      redirectUri,
+      decodedRedirectUri,
+      isErrorRedirect,
       errorFromRedirect,
       hasSessionCookie,
       redirectLocationOrigin: redirectLocation ? new URL(redirectLocation, req.url).origin : null,
       requestOrigin: new URL(req.url).origin,
-      // Extract callback URL from OAuth redirect if present
-      fullRedirectUrl: redirectLocation
+      requestUrl: req.url
     });
+    
+    // CRITICAL: If we have a redirect_uri, log it prominently
+    if (decodedRedirectUri) {
+      console.log('[OAUTH-CALLBACK-URL] ⚠️  CALLBACK URL BEING SENT TO GOOGLE:', decodedRedirectUri);
+      console.log('[OAUTH-CALLBACK-URL] ⚠️  This URL MUST be added to Google Cloud Console authorized redirect URIs');
+    }
     fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,redirectLocation,isErrorRedirect,isOAuthRedirect,callbackUrlInRedirect,errorFromRedirect,hasSessionCookie,redirectLocationOrigin:redirectLocation ? new URL(redirectLocation, req.url).origin : null,requestOrigin:new URL(req.url).origin,fullRedirectUrl:redirectLocation},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-callback-url-investigation',hypothesisId:'H7'})}).catch(()=>{});
     // #endregion
     return response;
