@@ -9,6 +9,9 @@ const getPrisma = async () => {
 };
 
 // #region agent log
+// CRITICAL: AUTH_SECRET must be IDENTICAL across all environments (Production, Preview, Development)
+// When using redirectProxyUrl, NextAuth uses AUTH_SECRET to verify OAuth state parameters
+// If AUTH_SECRET differs between preview and production, state verification fails → Configuration error
 const authSecret = getEnv("AUTH_SECRET");
 const authSecretLength = authSecret.length;
 const hasAuthSecret = !!authSecret;

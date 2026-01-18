@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import { getEnv } from "./lib/utils/env";
 
 // Edge-safe config for middleware (no Prisma/bcrypt)
+// CRITICAL: AUTH_SECRET must match production when using redirectProxyUrl
 const googleClientId = getEnv("GOOGLE_CLIENT_ID");
 const googleClientSecret = getEnv("GOOGLE_CLIENT_SECRET");
 const edgeAuthSecret = getEnv("AUTH_SECRET");
