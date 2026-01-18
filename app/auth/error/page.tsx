@@ -60,7 +60,18 @@ function AuthErrorContent() {
               </p>
             )}
             <Button asChild className="w-full">
-              <Link href="/auth/signin">Return to Sign In</Link>
+              <Link 
+                href="/auth/signin"
+                onClick={() => {
+                  // #region agent log
+                  const currentUrl = window.location.href;
+                  const currentOrigin = window.location.origin;
+                  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/error/page.tsx:Link:click',message:'Error page link clicked',data:{currentUrl,currentOrigin,linkHref:'/auth/signin',isRelative:true},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H6'})}).catch(()=>{});
+                  // #endregion
+                }}
+              >
+                Return to Sign In
+              </Link>
             </Button>
           </CardContent>
         </Card>
