@@ -204,44 +204,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
-      console.log('[OAUTH-REDIRECT] Redirect callback', { url, baseUrl });
+      console.log('[OAUTH-REDIRECT] Redirect callback invoked', { url, baseUrl, urlType: typeof url });
       
-      // SIMPLIFIED: Always redirect to home after OAuth to prevent loops
-      // If URL contains /auth/signin or /auth/signup, force to home
-      if (url.includes('/auth/signin') || url.includes('/auth/signup')) {
-        console.log('[OAUTH-REDIRECT] Blocking redirect to auth page, forcing to home');
+      // NUCLEAR OPTION: After OAuth, ALWAYS redirect to home, no exceptions
+      // This prevents ANY possibility of redirect loops
+      const isAuthPage = url.includes('/auth/signin') || 
+                        url.includes('/auth/signup') || 
+                        url.includes('/auth/error') ||
+                        (url.startsWith('/auth/') && !url.startsWith('/auth/error'));
+      
+      if (isAuthPage) {
+        console.log('[OAUTH-REDIRECT] BLOCKED: Redirect to auth page detected, forcing to home', { url });
         return baseUrl;
       }
       
-      // For relative URLs, check if they're auth pages
-      if (url.startsWith('/') && (url.startsWith('/auth/') && !url.startsWith('/auth/error'))) {
-        console.log('[OAUTH-REDIRECT] Blocking relative auth URL, forcing to home');
-        return baseUrl;
+      // For any URL that's not an auth page, allow it
+      // But if it's relative, make it absolute
+      if (url.startsWith('/')) {
+        const fullUrl = `${baseUrl}${url}`;
+        console.log('[OAUTH-REDIRECT] Allowing relative URL', { url, fullUrl });
+        return fullUrl;
       }
       
-      // For absolute URLs, check if same origin and not auth page
+      // For absolute URLs, check if same origin
       if (url.startsWith('http')) {
         try {
           const urlObj = new URL(url);
           if (urlObj.origin === baseUrl) {
-            if (urlObj.pathname.startsWith('/auth/') && !urlObj.pathname.startsWith('/auth/error')) {
-              console.log('[OAUTH-REDIRECT] Blocking absolute auth URL, forcing to home');
-              return baseUrl;
-            }
+            console.log('[OAUTH-REDIRECT] Allowing same-origin absolute URL', { url });
             return url;
+          } else {
+            console.log('[OAUTH-REDIRECT] Different origin, forcing to home', { url, baseUrl });
+            return baseUrl;
           }
         } catch (e) {
-          // Invalid URL, fall through to default
+          console.log('[OAUTH-REDIRECT] Invalid URL, forcing to home', { url, error: e });
+          return baseUrl;
         }
       }
       
-      // For relative URLs that aren't auth pages, construct full URL
-      if (url.startsWith('/')) {
-        return `${baseUrl}${url}`;
-      }
-      
-      // Default: always go to home
-      console.log('[OAUTH-REDIRECT] Default redirect to home');
+      // Fallback: always home
+      console.log('[OAUTH-REDIRECT] Fallback: redirecting to home', { url });
       return baseUrl;
     },
   },

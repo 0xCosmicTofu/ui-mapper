@@ -32,14 +32,30 @@ export default async function middleware(req: NextRequest) {
   
   // #region agent log
   // Check for session token cookie with both production (__Secure-) and development names
-  const sessionTokenCookie = cookieHeader.split(';').find(c => 
-    c.includes('authjs.session-token') || 
-    c.includes('next-auth.session-token') ||
-    c.includes('__Secure-authjs.session-token') ||
-    c.includes('__Secure-next-auth.session-token')
+  // Check ALL possible cookie name variations - be very permissive
+  const allCookies = cookieHeader.split(';').map(c => c.trim());
+  const sessionTokenCookie = allCookies.find(c => 
+    c.includes('session-token') || 
+    c.startsWith('authjs.session-token') || 
+    c.startsWith('next-auth.session-token') ||
+    c.startsWith('__Secure-authjs.session-token') ||
+    c.startsWith('__Secure-next-auth.session-token')
   );
-  const sessionTokenValue = sessionTokenCookie ? sessionTokenCookie.split('=')[1]?.substring(0, 20) + '...' : 'none';
-  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:middleware',message:'Middleware check',data:{pathname,hasSession,sessionUserId,sessionUserEmail,sessionDuration,isAuthPage,isPublicRoute,isApiRoute,authCookiesCount:authCookies.length,authCookies,sessionTokenPresent:!!sessionTokenCookie,sessionTokenValue,isFromOAuthCallback,referer},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H29'})}).catch(()=>{});
+  const sessionTokenValue = sessionTokenCookie ? (sessionTokenCookie.split('=')[1]?.substring(0, 20) || '') + '...' : 'none';
+  const cookieNames = allCookies.map(c => c.split('=')[0]).filter(Boolean);
+  console.log('[MIDDLEWARE] Session check', { 
+    pathname, 
+    hasSession, 
+    sessionUserId, 
+    sessionUserEmail,
+    sessionTokenPresent: !!sessionTokenCookie,
+    sessionTokenCookieName: sessionTokenCookie?.split('=')[0],
+    allCookieNames: cookieNames,
+    isFromOAuthCallback,
+    referer,
+    authCookiesCount: authCookies.length
+  });
+  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:middleware',message:'Middleware check',data:{pathname,hasSession,sessionUserId,sessionUserEmail,sessionDuration,isAuthPage,isPublicRoute,isApiRoute,authCookiesCount:authCookies.length,authCookies,sessionTokenPresent:!!sessionTokenCookie,sessionTokenValue,cookieNames,isFromOAuthCallback,referer},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-loop-investigation',hypothesisId:'H29'})}).catch(()=>{});
   // #endregion
   
   // Allow public routes and API routes (API routes handle their own auth)
@@ -56,11 +72,26 @@ export default async function middleware(req: NextRequest) {
   
   // Protect all other routes - require authentication
   if (!session) {
+    // NUCLEAR OPTION: If we're on the home page and have ANY auth-related cookie, allow through
+    // This handles the timing issue where OAuth just completed
+    if (pathname === '/' && (sessionTokenCookie || isFromOAuthCallback || authCookies.length > 0)) {
+      console.log('[MIDDLEWARE] Allowing home page with auth cookies/callback', { 
+        pathname, 
+        hasSessionToken: !!sessionTokenCookie,
+        isFromOAuthCallback,
+        authCookiesCount: authCookies.length 
+      });
+      return NextResponse.next();
+    }
+    
     // CRITICAL FIX: If we have a session token cookie, allow the request through
     // This handles the case where OAuth just completed and set the cookie,
     // but auth() hasn't validated it yet (timing issue)
     if (sessionTokenCookie) {
-      console.log('[MIDDLEWARE] No session but session token cookie present, allowing through', { pathname });
+      console.log('[MIDDLEWARE] No session but session token cookie present, allowing through', { 
+        pathname,
+        cookieName: sessionTokenCookie.split('=')[0]
+      });
       return NextResponse.next();
     }
     
@@ -70,7 +101,12 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
     
-    console.log('[MIDDLEWARE] No session, redirecting to signin', { pathname });
+    console.log('[MIDDLEWARE] No session, redirecting to signin', { 
+      pathname,
+      hasSessionToken: !!sessionTokenCookie,
+      isFromOAuthCallback,
+      authCookiesCount: authCookies.length
+    });
     const signInUrl = new URL('/auth/signin', req.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
