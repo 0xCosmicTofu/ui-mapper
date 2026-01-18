@@ -12,15 +12,38 @@ const getPrisma = async () => {
 const authSecret = getEnv("AUTH_SECRET");
 const authSecretLength = authSecret.length;
 const hasAuthSecret = !!authSecret;
-const nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
+
+// Auto-detect NEXTAUTH_URL in production (Vercel sets VERCEL_URL)
+// Only use explicit NEXTAUTH_URL if it's not localhost in production
+let nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
+if (!nextAuthUrl || (process.env.NODE_ENV === 'production' && nextAuthUrl.includes('localhost'))) {
+  // In production, prefer VERCEL_URL (auto-set by Vercel) or construct from headers
+  nextAuthUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.VERCEL 
+      ? `https://${process.env.VERCEL}`
+      : '';
+}
+
 const hasNextAuthUrl = !!nextAuthUrl;
-console.log('[AUTH-INIT] NextAuth initialization', {hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV});
-fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:init',message:'NextAuth initialization',data:{hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H1'})}).catch(()=>{});
+console.log('[AUTH-INIT] NextAuth initialization', {
+  hasAuthSecret,
+  authSecretLength,
+  hasNextAuthUrl,
+  nextAuthUrl,
+  nodeEnv: process.env.NODE_ENV,
+  vercelUrl: process.env.VERCEL_URL,
+  vercel: process.env.VERCEL,
+  explicitNextAuthUrl: process.env.NEXTAUTH_URL,
+  explicitAuthUrl: process.env.AUTH_URL
+});
+fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:init',message:'NextAuth initialization',data:{hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV,vercelUrl:process.env.VERCEL_URL,vercel:process.env.VERCEL,explicitNextAuthUrl:process.env.NEXTAUTH_URL,explicitAuthUrl:process.env.AUTH_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H3'})}).catch(()=>{});
 // #endregion
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
+  trustHost: true, // Trust Vercel's Host header for auto URL detection
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {

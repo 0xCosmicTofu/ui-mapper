@@ -22,6 +22,7 @@ const googleProvider = googleClientId && googleClientSecret
 export default {
   secret: edgeAuthSecret,
   session: { strategy: "jwt" },
+  trustHost: true, // Trust Vercel's Host header for auto URL detection
   providers: googleProvider ? [googleProvider] : [],
   pages: {
     signIn: "/auth/signin",
