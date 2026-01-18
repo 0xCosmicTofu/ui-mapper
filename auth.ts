@@ -14,6 +14,7 @@ const authSecretLength = authSecret.length;
 const hasAuthSecret = !!authSecret;
 const nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
 const hasNextAuthUrl = !!nextAuthUrl;
+console.log('[AUTH-INIT] NextAuth initialization', {hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV});
 fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:init',message:'NextAuth initialization',data:{hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H1'})}).catch(()=>{});
 // #endregion
 
