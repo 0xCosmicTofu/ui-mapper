@@ -44,12 +44,21 @@ console.log('[AUTH-INIT] NextAuth initialization', {
 fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:init',message:'NextAuth initialization',data:{hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV,vercelUrl:process.env.VERCEL_URL,vercel:process.env.VERCEL,explicitNextAuthUrl:process.env.NEXTAUTH_URL,explicitAuthUrl:process.env.AUTH_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H3'})}).catch(()=>{});
 // #endregion
 
+// CRITICAL FIX: For preview deployments, we MUST ensure NextAuth uses VERCEL_URL
+// Even with trustHost: true, NextAuth may fall back to AUTH_URL/NEXTAUTH_URL if set
+// We need to explicitly tell NextAuth to use the preview URL when VERCEL_URL is present
+// However, we can't set baseUrl directly as it conflicts with trustHost
+// Instead, we rely on trustHost: true and ensure headers are correct
+// The issue might be that AUTH_URL/NEXTAUTH_URL are overriding trustHost behavior
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
   trustHost: true, // Trust Vercel's Host header for auto URL detection
-  // CRITICAL: Don't set baseUrl when trustHost is true - it will override header detection
-  // NextAuth will construct callback URLs from request headers when trustHost: true
+  // NOTE: With trustHost: true, NextAuth should use request headers
+  // But if AUTH_URL or NEXTAUTH_URL is set, it may still use those as fallback
+  // We cannot set baseUrl here as it conflicts with trustHost
+  // The solution is to ensure VERCEL_URL is used via headers (which trustHost enables)
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {
