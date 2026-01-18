@@ -23,20 +23,7 @@ export class WebScraper {
    * If secret key is provided, the URL is signed with HMAC-SHA256
    */
   private generateScreenshotUrl(targetUrl: string): string | null {
-    // #region agent log
-    console.log("[SCREENSHOT] generateScreenshotUrl called", {
-      targetUrl,
-      hasAccessKey: !!this.screenshotOneAccessKey,
-      accessKeyLength: this.screenshotOneAccessKey?.length || 0,
-      hasSecretKey: !!this.screenshotOneSecretKey,
-      secretKeyLength: this.screenshotOneSecretKey?.length || 0,
-    });
-    // #endregion
-
     if (!this.screenshotOneAccessKey) {
-      // #region agent log
-      console.log("[SCREENSHOT] No access key - skipping screenshot");
-      // #endregion
       return null;
     }
 
@@ -48,12 +35,12 @@ export class WebScraper {
       viewport_height: "800",
       device_scale_factor: "1",
       format: "webp",
-      full_page: "true", // Capture the entire page, not just viewport
+      full_page: "true",
       block_ads: "true",
       block_cookie_banners: "true",
       block_chats: "true",
       cache: "true",
-      cache_ttl: "86400", // 24 hours
+      cache_ttl: "86400",
     };
 
     // Build query string
@@ -65,33 +52,14 @@ export class WebScraper {
         .update(queryString)
         .digest("hex");
       
-      const signedUrl = `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
-      
-      // #region agent log
-      console.log("[SCREENSHOT] Generated signed URL", {
-        signatureLength: signature.length,
-        urlLength: signedUrl.length,
-      });
-      // #endregion
-      
-      return signedUrl;
+      return `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
     }
 
-    const unsignedUrl = `https://api.screenshotone.com/take?${queryString}`;
-    
-    // #region agent log
-    console.log("[SCREENSHOT] Generated unsigned URL", {
-      urlLength: unsignedUrl.length,
-    });
-    // #endregion
-
-    // Without secret key, return unsigned URL (less secure but still works)
-    return unsignedUrl;
+    return `https://api.screenshotone.com/take?${queryString}`;
   }
 
   async scrape(url: string): Promise<ScrapeResult> {
     try {
-      // Fetch HTML content
       const response = await axios.get(url, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -100,23 +68,12 @@ export class WebScraper {
       });
 
       const rawHtml = response.data as string;
-
-      // Preprocess HTML to reduce size and improve AI processing speed
       const html = preprocessHTML(rawHtml, 50000);
       
-      // Extract title from HTML (before preprocessing to ensure we get it)
       const titleMatch = rawHtml.match(/<title[^>]*>([^<]+)<\/title>/i);
       const title = titleMatch ? titleMatch[1].trim() : "Untitled";
 
-      // Generate screenshot URL using ScreenshotOne
       const screenshotPath = this.generateScreenshotUrl(url) || "";
-
-      // #region agent log
-      console.log("[SCREENSHOT] Final scrape result", {
-        screenshotPath: screenshotPath ? screenshotPath.substring(0, 100) + "..." : "(empty)",
-        hasScreenshot: !!screenshotPath,
-      });
-      // #endregion
 
       return {
         html,
