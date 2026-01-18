@@ -23,7 +23,20 @@ export class WebScraper {
    * If secret key is provided, the URL is signed with HMAC-SHA256
    */
   private generateScreenshotUrl(targetUrl: string): string | null {
+    // #region agent log
+    console.log("[SCREENSHOT] generateScreenshotUrl called", {
+      targetUrl,
+      hasAccessKey: !!this.screenshotOneAccessKey,
+      accessKeyLength: this.screenshotOneAccessKey?.length || 0,
+      hasSecretKey: !!this.screenshotOneSecretKey,
+      secretKeyLength: this.screenshotOneSecretKey?.length || 0,
+    });
+    // #endregion
+
     if (!this.screenshotOneAccessKey) {
+      // #region agent log
+      console.log("[SCREENSHOT] No access key - skipping screenshot");
+      // #endregion
       return null;
     }
 
@@ -51,11 +64,28 @@ export class WebScraper {
         .update(queryString)
         .digest("hex");
       
-      return `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
+      const signedUrl = `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
+      
+      // #region agent log
+      console.log("[SCREENSHOT] Generated signed URL", {
+        signatureLength: signature.length,
+        urlLength: signedUrl.length,
+      });
+      // #endregion
+      
+      return signedUrl;
     }
 
+    const unsignedUrl = `https://api.screenshotone.com/take?${queryString}`;
+    
+    // #region agent log
+    console.log("[SCREENSHOT] Generated unsigned URL", {
+      urlLength: unsignedUrl.length,
+    });
+    // #endregion
+
     // Without secret key, return unsigned URL (less secure but still works)
-    return `https://api.screenshotone.com/take?${queryString}`;
+    return unsignedUrl;
   }
 
   async scrape(url: string): Promise<ScrapeResult> {
@@ -79,6 +109,13 @@ export class WebScraper {
 
       // Generate screenshot URL using ScreenshotOne
       const screenshotPath = this.generateScreenshotUrl(url) || "";
+
+      // #region agent log
+      console.log("[SCREENSHOT] Final scrape result", {
+        screenshotPath: screenshotPath ? screenshotPath.substring(0, 100) + "..." : "(empty)",
+        hasScreenshot: !!screenshotPath,
+      });
+      // #endregion
 
       return {
         html,
