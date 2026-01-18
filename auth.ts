@@ -13,20 +13,31 @@ const authSecret = getEnv("AUTH_SECRET");
 const authSecretLength = authSecret.length;
 const hasAuthSecret = !!authSecret;
 
-// CRITICAL FIX: Override NEXTAUTH_URL/AUTH_URL for preview deployments
-// NextAuth v5 reads these env vars at import time, so we must override them BEFORE importing NextAuth
-// For preview deployments (VERCEL_URL present), use the preview URL instead of production NEXTAUTH_URL
+// CRITICAL FIX: Handle preview deployments with AUTH_REDIRECT_PROXY_URL
+// Google OAuth doesn't support wildcards, so we can't register every preview URL
+// Solution: Use AUTH_REDIRECT_PROXY_URL to always use production URL for OAuth callback
+// NextAuth will then redirect back to the preview URL after authentication
 if (process.env.VERCEL_URL) {
-  // Preview deployment - override NEXTAUTH_URL and AUTH_URL to use preview URL
+  // Preview deployment detected
   const previewUrl = `https://${process.env.VERCEL_URL}`;
-  // Override both for maximum compatibility
-  process.env.NEXTAUTH_URL = previewUrl;
+  const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://webflow-ui-mapper.vercel.app';
+  
+  // For preview deployments, set AUTH_REDIRECT_PROXY_URL to production URL
+  // This ensures OAuth callback always goes to the registered production URL
+  // NextAuth will automatically redirect back to the preview URL after auth
+  if (!process.env.AUTH_REDIRECT_PROXY_URL) {
+    process.env.AUTH_REDIRECT_PROXY_URL = productionUrl;
+  }
+  
+  // Still set AUTH_URL to preview URL for other NextAuth operations
   process.env.AUTH_URL = previewUrl;
-  console.log('[AUTH-INIT] Overriding NEXTAUTH_URL/AUTH_URL for preview deployment', {
+  
+  console.log('[AUTH-INIT] Preview deployment detected - using AUTH_REDIRECT_PROXY_URL', {
     vercelUrl: process.env.VERCEL_URL,
     previewUrl,
-    originalNextAuthUrl: process.env.NEXTAUTH_URL,
-    originalAuthUrl: process.env.AUTH_URL
+    productionUrl,
+    authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
+    authUrl: process.env.AUTH_URL
   });
 } else {
   // Production deployment - use explicit NEXTAUTH_URL or AUTH_URL if set
