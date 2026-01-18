@@ -127,6 +127,7 @@ export const GET = async (req: NextRequest) => {
     // CRITICAL: Log Configuration errors immediately with full context
     if (callbackError === 'Configuration' || errorFromRedirect === 'Configuration') {
       const authSecretHash = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64').substring(0, 16) : 'MISSING';
+      const authSecretFullHash = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64') : 'MISSING';
       console.error('[CONFIGURATION-ERROR] ==========================================');
       console.error('[CONFIGURATION-ERROR] NextAuth Configuration error detected!');
       console.error('[CONFIGURATION-ERROR] Request details:', {
@@ -142,7 +143,9 @@ export const GET = async (req: NextRequest) => {
         xForwardedProto: req.headers.get('x-forwarded-proto'),
         stateParam: callbackState,
         stateLength: callbackState?.length || 0,
+        stateFirst50: callbackState?.substring(0, 50),
         hasCode: !!callbackCode,
+        codeLength: callbackCode?.length || 0,
       });
       console.error('[CONFIGURATION-ERROR] Environment variables:', {
         authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
@@ -151,8 +154,10 @@ export const GET = async (req: NextRequest) => {
         vercelUrl: process.env.VERCEL_URL,
         hasAuthSecret: !!process.env.AUTH_SECRET,
         authSecretLength: process.env.AUTH_SECRET?.length || 0,
-        authSecretHash, // Hash for cross-deployment verification
+        authSecretHash, // First 16 chars for verification
+        authSecretFullHash, // Full hash for exact comparison
         isPreview: !!process.env.VERCEL_URL,
+        nodeEnv: process.env.NODE_ENV,
       });
       console.error('[CONFIGURATION-ERROR] Response details:', {
         status,
@@ -161,7 +166,7 @@ export const GET = async (req: NextRequest) => {
         decodedRedirectUri,
       });
       console.error('[CONFIGURATION-ERROR] ==========================================');
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:CONFIGURATION-ERROR',message:'Configuration error detected',data:{pathname,isCallbackRequest,callbackError,callbackErrorDescription,errorFromRedirect,requestUrl:req.url,requestOrigin:new URL(req.url).origin,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,vercelUrl:process.env.VERCEL_URL,redirectLocation:redirectLocation?.substring(0,200),decodedRedirectUri,stateParam:callbackState,stateLength:callbackState?.length||0,hasCode:!!callbackCode,authSecretHash,isPreview:!!process.env.VERCEL_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'configuration-error-debug-v2',hypothesisId:'H13'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:CONFIGURATION-ERROR',message:'Configuration error detected',data:{pathname,isCallbackRequest,callbackError,callbackErrorDescription,errorFromRedirect,requestUrl:req.url,requestOrigin:new URL(req.url).origin,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,vercelUrl:process.env.VERCEL_URL,redirectLocation:redirectLocation?.substring(0,200),decodedRedirectUri,stateParam:callbackState,stateLength:callbackState?.length||0,stateFirst50:callbackState?.substring(0,50),hasCode:!!callbackCode,codeLength:callbackCode?.length||0,authSecretHash,authSecretFullHash,isPreview:!!process.env.VERCEL_URL,nodeEnv:process.env.NODE_ENV},timestamp:Date.now(),sessionId:'debug-session',runId:'configuration-error-v3',hypothesisId:'H18'})}).catch(()=>{});
     }
     
     console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {

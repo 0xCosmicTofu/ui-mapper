@@ -44,13 +44,19 @@ if (process.env.VERCEL_URL) {
   // AUTH_URL is used for other NextAuth operations and should match the actual deployment
   process.env.AUTH_URL = previewUrl;
   
+  const authSecretHashPreview = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64').substring(0, 16) : 'MISSING';
+  const authSecretFullHashPreview = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64') : 'MISSING';
   console.log('[AUTH-INIT] Preview deployment detected - using AUTH_REDIRECT_PROXY_URL', {
     vercelUrl: process.env.VERCEL_URL,
     previewUrl,
     productionUrl,
     authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
-    authUrl: process.env.AUTH_URL
+    authUrl: process.env.AUTH_URL,
+    authSecretHash: authSecretHashPreview,
+    authSecretFullHash: authSecretFullHashPreview,
+    authSecretLength: process.env.AUTH_SECRET?.length || 0
   });
+  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:AUTH-INIT:preview',message:'Preview deployment init',data:{vercelUrl:process.env.VERCEL_URL,previewUrl,productionUrl,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,authSecretHash:authSecretHashPreview,authSecretFullHash:authSecretFullHashPreview,authSecretLength:process.env.AUTH_SECRET?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-v3',hypothesisId:'H18'})}).catch(()=>{});
 } else {
   // Production deployment
   // CRITICAL: If AUTH_REDIRECT_PROXY_URL is explicitly set (e.g., from preview deployments),
@@ -71,12 +77,18 @@ if (process.env.VERCEL_URL) {
     process.env.AUTH_URL = productionUrl;
   }
   
+  const authSecretHashProd = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64').substring(0, 16) : 'MISSING';
+  const authSecretFullHashProd = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64') : 'MISSING';
   console.log('[AUTH-INIT] Production deployment', {
     productionUrl,
     authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
     authUrl: process.env.AUTH_URL,
+    authSecretHash: authSecretHashProd,
+    authSecretFullHash: authSecretFullHashProd,
+    authSecretLength: process.env.AUTH_SECRET?.length || 0,
     note: 'Production will handle callbacks from both production and preview deployments'
   });
+  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:AUTH-INIT:production',message:'Production deployment init',data:{productionUrl,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,authSecretHash:authSecretHashProd,authSecretFullHash:authSecretFullHashProd,authSecretLength:process.env.AUTH_SECRET?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-v3',hypothesisId:'H18'})}).catch(()=>{});
 }
 
 const nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
