@@ -13,22 +13,30 @@ const authSecret = getEnv("AUTH_SECRET");
 const authSecretLength = authSecret.length;
 const hasAuthSecret = !!authSecret;
 
-// CRITICAL: For preview deployments, ALWAYS use VERCEL_URL (preview URL)
-// Only use explicit NEXTAUTH_URL for production deployments
-// This prevents OAuth callback mismatches on preview deployments
-let nextAuthUrl = '';
+// CRITICAL FIX: Override NEXTAUTH_URL/AUTH_URL for preview deployments
+// NextAuth v5 reads these env vars at import time, so we must override them BEFORE importing NextAuth
+// For preview deployments (VERCEL_URL present), use the preview URL instead of production NEXTAUTH_URL
 if (process.env.VERCEL_URL) {
-  // Preview deployment - use VERCEL_URL (auto-set by Vercel)
-  nextAuthUrl = `https://${process.env.VERCEL_URL}`;
+  // Preview deployment - override NEXTAUTH_URL and AUTH_URL to use preview URL
+  const previewUrl = `https://${process.env.VERCEL_URL}`;
+  // Override both for maximum compatibility
+  process.env.NEXTAUTH_URL = previewUrl;
+  process.env.AUTH_URL = previewUrl;
+  console.log('[AUTH-INIT] Overriding NEXTAUTH_URL/AUTH_URL for preview deployment', {
+    vercelUrl: process.env.VERCEL_URL,
+    previewUrl,
+    originalNextAuthUrl: process.env.NEXTAUTH_URL,
+    originalAuthUrl: process.env.AUTH_URL
+  });
 } else {
-  // Production deployment - use explicit NEXTAUTH_URL or AUTH_URL
-  nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
-  // Fallback: if no explicit URL and in production, try to construct from VERCEL env
-  if (!nextAuthUrl && process.env.VERCEL) {
-    nextAuthUrl = `https://${process.env.VERCEL}`;
+  // Production deployment - use explicit NEXTAUTH_URL or AUTH_URL if set
+  const explicitUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL;
+  if (explicitUrl) {
+    process.env.AUTH_URL = explicitUrl; // Ensure AUTH_URL is set for consistency
   }
 }
 
+const nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
 const hasNextAuthUrl = !!nextAuthUrl;
 console.log('[AUTH-INIT] NextAuth initialization', {
   hasAuthSecret,
@@ -41,24 +49,18 @@ console.log('[AUTH-INIT] NextAuth initialization', {
   explicitNextAuthUrl: process.env.NEXTAUTH_URL,
   explicitAuthUrl: process.env.AUTH_URL
 });
-fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:init',message:'NextAuth initialization',data:{hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV,vercelUrl:process.env.VERCEL_URL,vercel:process.env.VERCEL,explicitNextAuthUrl:process.env.NEXTAUTH_URL,explicitAuthUrl:process.env.AUTH_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H3'})}).catch(()=>{});
+fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:init',message:'NextAuth initialization',data:{hasAuthSecret,authSecretLength,hasNextAuthUrl,nextAuthUrl,nodeEnv:process.env.NODE_ENV,vercelUrl:process.env.VERCEL_URL,vercel:process.env.VERCEL,explicitNextAuthUrl:process.env.NEXTAUTH_URL,explicitAuthUrl:process.env.AUTH_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'preview-url-override-fix',hypothesisId:'H8'})}).catch(()=>{});
 // #endregion
 
-// CRITICAL FIX: For preview deployments, we MUST ensure NextAuth uses VERCEL_URL
-// Even with trustHost: true, NextAuth may fall back to AUTH_URL/NEXTAUTH_URL if set
-// We need to explicitly tell NextAuth to use the preview URL when VERCEL_URL is present
-// However, we can't set baseUrl directly as it conflicts with trustHost
-// Instead, we rely on trustHost: true and ensure headers are correct
-// The issue might be that AUTH_URL/NEXTAUTH_URL are overriding trustHost behavior
-
+// CRITICAL FIX: We've already overridden NEXTAUTH_URL/AUTH_URL above for preview deployments
+// With trustHost: true, NextAuth will use request headers, but having the correct AUTH_URL
+// ensures consistency and prevents fallback to production URL
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
   trustHost: true, // Trust Vercel's Host header for auto URL detection
-  // NOTE: With trustHost: true, NextAuth should use request headers
-  // But if AUTH_URL or NEXTAUTH_URL is set, it may still use those as fallback
-  // We cannot set baseUrl here as it conflicts with trustHost
-  // The solution is to ensure VERCEL_URL is used via headers (which trustHost enables)
+  // AUTH_URL/NEXTAUTH_URL have been overridden above for preview deployments
+  // trustHost: true ensures headers are also respected
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {
