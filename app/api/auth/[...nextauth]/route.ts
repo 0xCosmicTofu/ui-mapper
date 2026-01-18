@@ -93,7 +93,7 @@ export const GET = async (req: NextRequest) => {
       console.log('[OAUTH-CALLBACK-URL] ⚠️  CALLBACK URL BEING SENT TO GOOGLE:', decodedRedirectUri);
       console.log('[OAUTH-CALLBACK-URL] ⚠️  This URL MUST be added to Google Cloud Console authorized redirect URIs');
     }
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,redirectLocation,isErrorRedirect,isOAuthRedirect,callbackUrlInRedirect,errorFromRedirect,hasSessionCookie,redirectLocationOrigin:redirectLocation ? new URL(redirectLocation, req.url).origin : null,requestOrigin:new URL(req.url).origin,fullRedirectUrl:redirectLocation},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-callback-url-investigation',hypothesisId:'H7'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,pathname,isCallbackRequest,callbackError,callbackErrorDescription,redirectLocation:redirectLocation?.substring(0,200),isOAuthRedirect,redirectUri,decodedRedirectUri,isErrorRedirect,errorFromRedirect,hasSessionCookie,redirectLocationOrigin:redirectLocation ? new URL(redirectLocation, req.url).origin : null,requestOrigin:new URL(req.url).origin,requestUrl:req.url},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-callback-url-investigation',hypothesisId:'H7'})}).catch(()=>{});
     // #endregion
     return response;
   } catch (error) {
