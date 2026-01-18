@@ -51,9 +51,11 @@ export const GET = async (req: NextRequest) => {
     const isOAuthRedirect = redirectLocation && (redirectLocation.includes('accounts.google.com') || redirectLocation.includes('oauth'));
     let redirectUri = null;
     let decodedRedirectUri = null;
+    let fullOAuthUrl = null;
     
     if (isOAuthRedirect && redirectLocation) {
       try {
+        fullOAuthUrl = redirectLocation;
         const url = new URL(redirectLocation);
         redirectUri = url.searchParams.get('redirect_uri');
         if (redirectUri) {
@@ -88,10 +90,17 @@ export const GET = async (req: NextRequest) => {
       requestUrl: req.url
     });
     
-    // CRITICAL: If we have a redirect_uri, log it prominently
+    // CRITICAL: If we have a redirect_uri, log it prominently with full context
     if (decodedRedirectUri) {
-      console.log('[OAUTH-CALLBACK-URL] WARNING: CALLBACK URL BEING SENT TO GOOGLE:', decodedRedirectUri);
-      console.log('[OAUTH-CALLBACK-URL] WARNING: This URL MUST be added to Google Cloud Console authorized redirect URIs');
+      console.log('[OAUTH-CALLBACK-URL] ==========================================');
+      console.log('[OAUTH-CALLBACK-URL] CALLBACK URL BEING SENT TO GOOGLE:', decodedRedirectUri);
+      console.log('[OAUTH-CALLBACK-URL] Full OAuth URL:', fullOAuthUrl?.substring(0, 300));
+      console.log('[OAUTH-CALLBACK-URL] Request URL:', req.url);
+      console.log('[OAUTH-CALLBACK-URL] AUTH_REDIRECT_PROXY_URL:', process.env.AUTH_REDIRECT_PROXY_URL);
+      console.log('[OAUTH-CALLBACK-URL] AUTH_URL:', process.env.AUTH_URL);
+      console.log('[OAUTH-CALLBACK-URL] NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+      console.log('[OAUTH-CALLBACK-URL] ==========================================');
+      console.log('[OAUTH-CALLBACK-URL] This URL MUST match exactly what is in Google Cloud Console');
     }
     fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,pathname,isCallbackRequest,callbackError,callbackErrorDescription,redirectLocation:redirectLocation?.substring(0,200),isOAuthRedirect,redirectUri,decodedRedirectUri,isErrorRedirect,errorFromRedirect,hasSessionCookie,redirectLocationOrigin:redirectLocation ? new URL(redirectLocation, req.url).origin : null,requestOrigin:new URL(req.url).origin,requestUrl:req.url},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-callback-url-investigation',hypothesisId:'H7'})}).catch(()=>{});
     // #endregion

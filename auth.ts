@@ -22,11 +22,12 @@ if (process.env.VERCEL_URL) {
   const previewUrl = `https://${process.env.VERCEL_URL}`;
   const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://webflow-ui-mapper.vercel.app';
   
-  // For preview deployments, set AUTH_REDIRECT_PROXY_URL to production URL
+  // For preview deployments, set AUTH_REDIRECT_PROXY_URL to production callback URL
+  // CRITICAL: Must include full path /api/auth, not just base URL
   // This ensures OAuth callback always goes to the registered production URL
   // NextAuth will automatically redirect back to the preview URL after auth
   if (!process.env.AUTH_REDIRECT_PROXY_URL) {
-    process.env.AUTH_REDIRECT_PROXY_URL = productionUrl;
+    process.env.AUTH_REDIRECT_PROXY_URL = `${productionUrl}/api/auth`;
   }
   
   // Still set AUTH_URL to preview URL for other NextAuth operations
@@ -71,6 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: authSecret,
   trustHost: true, // Trust Vercel's Host header for auto URL detection
   // AUTH_URL/NEXTAUTH_URL have been overridden above for preview deployments
+  // AUTH_REDIRECT_PROXY_URL is set for preview deployments to use production callback URL
   // trustHost: true ensures headers are also respected
   ...authConfig,
   callbacks: {
