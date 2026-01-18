@@ -23,18 +23,7 @@ export class WebScraper {
    * If secret key is provided, the URL is signed with HMAC-SHA256
    */
   private generateScreenshotUrl(targetUrl: string): string | null {
-    // #region agent log
-    console.log("[SCREENSHOT-DEBUG] generateScreenshotUrl called", {
-      targetUrl,
-      hasAccessKey: !!this.screenshotOneAccessKey,
-      accessKeyLength: this.screenshotOneAccessKey?.length || 0,
-      hasSecretKey: !!this.screenshotOneSecretKey,
-      secretKeyLength: this.screenshotOneSecretKey?.length || 0,
-    });
-    // #endregion
-
     if (!this.screenshotOneAccessKey) {
-      console.log("[SCREENSHOT] ScreenshotOne access key not configured, skipping screenshot");
       return null;
     }
 
@@ -56,49 +45,20 @@ export class WebScraper {
     // Build query string
     const queryString = new URLSearchParams(params).toString();
 
-    // #region agent log
-    console.log("[SCREENSHOT-DEBUG] Query string built", {
-      queryStringLength: queryString.length,
-      queryStringPreview: queryString.substring(0, 100) + "...",
-    });
-    // #endregion
-
     // If secret key is provided, sign the request
     if (this.screenshotOneSecretKey) {
       const signature = createHmac("sha256", this.screenshotOneSecretKey)
         .update(queryString)
         .digest("hex");
       
-      const signedUrl = `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
-      
-      // #region agent log
-      console.log("[SCREENSHOT-DEBUG] Signed URL generated", {
-        signatureLength: signature.length,
-        signaturePreview: signature.substring(0, 16) + "...",
-        fullUrlLength: signedUrl.length,
-        urlPreview: signedUrl.substring(0, 150) + "...",
-      });
-      // #endregion
-      
-      return signedUrl;
+      return `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
     }
 
-    const unsignedUrl = `https://api.screenshotone.com/take?${queryString}`;
-    
-    // #region agent log
-    console.log("[SCREENSHOT-DEBUG] Unsigned URL generated", {
-      fullUrlLength: unsignedUrl.length,
-      urlPreview: unsignedUrl.substring(0, 150) + "...",
-    });
-    // #endregion
-
     // Without secret key, return unsigned URL (less secure but still works)
-    return unsignedUrl;
+    return `https://api.screenshotone.com/take?${queryString}`;
   }
 
   async scrape(url: string): Promise<ScrapeResult> {
-    console.log("[SCRAPER] Starting scrape", { url });
-
     try {
       // Fetch HTML content
       const response = await axios.get(url, {
@@ -120,24 +80,6 @@ export class WebScraper {
       // Generate screenshot URL using ScreenshotOne
       const screenshotPath = this.generateScreenshotUrl(url) || "";
 
-      // #region agent log
-      console.log("[SCREENSHOT-DEBUG] Final screenshotPath", {
-        screenshotPath: screenshotPath || "(empty)",
-        screenshotPathLength: screenshotPath.length,
-        startsWithHttps: screenshotPath.startsWith("https://"),
-        containsScreenshotOne: screenshotPath.includes("screenshotone"),
-      });
-      // #endregion
-
-      console.log("[SCRAPER] Scrape completed", {
-        url,
-        rawHtmlLength: rawHtml.length,
-        processedHtmlLength: html.length,
-        title,
-        hasScreenshot: !!screenshotPath,
-        isSigned: !!this.screenshotOneSecretKey,
-      });
-
       return {
         html,
         screenshotPath,
@@ -145,10 +87,6 @@ export class WebScraper {
         title,
       };
     } catch (error) {
-      console.error("[SCRAPER] Scrape failed", {
-        url,
-        error: error instanceof Error ? error.message : String(error),
-      });
       throw new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
