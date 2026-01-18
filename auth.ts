@@ -48,7 +48,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
   trustHost: true, // Trust Vercel's Host header for auto URL detection
-  // Don't set baseUrl - let trustHost handle it automatically
+  // CRITICAL: Don't set baseUrl when trustHost is true - it will override header detection
+  // NextAuth will construct callback URLs from request headers when trustHost: true
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {
