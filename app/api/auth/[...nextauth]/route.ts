@@ -39,6 +39,7 @@ export const GET = async (req: NextRequest) => {
   
   try {
     // #region agent log - BEFORE calling handlers.GET
+    const authSecretHash = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64').substring(0, 16) : 'MISSING';
     const beforeState = {
       pathname,
       isSignIn,
@@ -49,11 +50,17 @@ export const GET = async (req: NextRequest) => {
       hasRedirectProxyUrl: !!process.env.AUTH_REDIRECT_PROXY_URL,
       redirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
       authUrl: process.env.AUTH_URL,
+      nextAuthUrl: process.env.NEXTAUTH_URL,
       vercelUrl: process.env.VERCEL_URL,
-      isPreview: !!process.env.VERCEL_URL
+      isPreview: !!process.env.VERCEL_URL,
+      authSecretHash, // Hash for verification
+      authSecretLength: process.env.AUTH_SECRET?.length || 0,
+      // CRITICAL: Log state parameter if this is a callback
+      stateParam: pathname.includes('callback') ? req.nextUrl.searchParams.get('state') : null,
+      stateLength: pathname.includes('callback') ? (req.nextUrl.searchParams.get('state')?.length || 0) : 0
     };
     console.log('[NEXTAUTH-GET-BEFORE] Before calling handlers.GET', beforeState);
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:before',message:'Before handlers.GET',data:beforeState,timestamp:Date.now(),sessionId:'debug-session',runId:'callback-url-investigation',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:before',message:'Before handlers.GET',data:beforeState,timestamp:Date.now(),sessionId:'debug-session',runId:'state-verification-debug',hypothesisId:'H13'})}).catch(()=>{});
     // #endregion
     
     const response = await handlers.GET(req);
@@ -94,6 +101,7 @@ export const GET = async (req: NextRequest) => {
     
     // #region agent log - Callback request analysis
     if (isCallbackRequest) {
+      const authSecretHash = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64').substring(0, 16) : 'MISSING';
       console.log('[OAUTH-CALLBACK] OAuth callback received', {
         pathname,
         callbackError,
@@ -101,19 +109,24 @@ export const GET = async (req: NextRequest) => {
         hasCode: !!callbackCode,
         hasState: !!callbackState,
         stateLength: callbackState?.length || 0,
+        stateParam: callbackState?.substring(0, 50) + '...', // First 50 chars for debugging
         requestUrl: req.url,
         requestOrigin: new URL(req.url).origin,
         isPreview: !!process.env.VERCEL_URL,
         vercelUrl: process.env.VERCEL_URL,
         authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
-        authUrl: process.env.AUTH_URL
+        authUrl: process.env.AUTH_URL,
+        nextAuthUrl: process.env.NEXTAUTH_URL,
+        authSecretHash, // Hash for verification
+        authSecretLength: process.env.AUTH_SECRET?.length || 0,
       });
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:OAUTH-CALLBACK',message:'OAuth callback received',data:{pathname,callbackError,callbackErrorDescription,hasCode:!!callbackCode,hasState:!!callbackState,stateLength:callbackState?.length||0,requestUrl:req.url,requestOrigin:new URL(req.url).origin,isPreview:!!process.env.VERCEL_URL,vercelUrl:process.env.VERCEL_URL,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'callback-url-investigation',hypothesisId:'H2'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:OAUTH-CALLBACK',message:'OAuth callback received',data:{pathname,callbackError,callbackErrorDescription,hasCode:!!callbackCode,hasState:!!callbackState,stateLength:callbackState?.length||0,stateParam:callbackState?.substring(0,50),requestUrl:req.url,requestOrigin:new URL(req.url).origin,isPreview:!!process.env.VERCEL_URL,vercelUrl:process.env.VERCEL_URL,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,authSecretHash,authSecretLength:process.env.AUTH_SECRET?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'state-verification-debug',hypothesisId:'H13'})}).catch(()=>{});
     }
     // #endregion
     
     // CRITICAL: Log Configuration errors immediately with full context
     if (callbackError === 'Configuration' || errorFromRedirect === 'Configuration') {
+      const authSecretHash = process.env.AUTH_SECRET ? Buffer.from(process.env.AUTH_SECRET).toString('base64').substring(0, 16) : 'MISSING';
       console.error('[CONFIGURATION-ERROR] ==========================================');
       console.error('[CONFIGURATION-ERROR] NextAuth Configuration error detected!');
       console.error('[CONFIGURATION-ERROR] Request details:', {
@@ -127,6 +140,9 @@ export const GET = async (req: NextRequest) => {
         requestHost: req.headers.get('host'),
         xForwardedHost: req.headers.get('x-forwarded-host'),
         xForwardedProto: req.headers.get('x-forwarded-proto'),
+        stateParam: callbackState,
+        stateLength: callbackState?.length || 0,
+        hasCode: !!callbackCode,
       });
       console.error('[CONFIGURATION-ERROR] Environment variables:', {
         authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
@@ -135,6 +151,8 @@ export const GET = async (req: NextRequest) => {
         vercelUrl: process.env.VERCEL_URL,
         hasAuthSecret: !!process.env.AUTH_SECRET,
         authSecretLength: process.env.AUTH_SECRET?.length || 0,
+        authSecretHash, // Hash for cross-deployment verification
+        isPreview: !!process.env.VERCEL_URL,
       });
       console.error('[CONFIGURATION-ERROR] Response details:', {
         status,
@@ -143,7 +161,7 @@ export const GET = async (req: NextRequest) => {
         decodedRedirectUri,
       });
       console.error('[CONFIGURATION-ERROR] ==========================================');
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:CONFIGURATION-ERROR',message:'Configuration error detected',data:{pathname,isCallbackRequest,callbackError,callbackErrorDescription,errorFromRedirect,requestUrl:req.url,requestOrigin:new URL(req.url).origin,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,vercelUrl:process.env.VERCEL_URL,redirectLocation:redirectLocation?.substring(0,200),decodedRedirectUri},timestamp:Date.now(),sessionId:'debug-session',runId:'configuration-error-debug',hypothesisId:'H10'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:CONFIGURATION-ERROR',message:'Configuration error detected',data:{pathname,isCallbackRequest,callbackError,callbackErrorDescription,errorFromRedirect,requestUrl:req.url,requestOrigin:new URL(req.url).origin,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,vercelUrl:process.env.VERCEL_URL,redirectLocation:redirectLocation?.substring(0,200),decodedRedirectUri,stateParam:callbackState,stateLength:callbackState?.length||0,hasCode:!!callbackCode,authSecretHash,isPreview:!!process.env.VERCEL_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'configuration-error-debug-v2',hypothesisId:'H13'})}).catch(()=>{});
     }
     
     console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {

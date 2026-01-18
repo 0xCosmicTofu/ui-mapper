@@ -112,6 +112,22 @@ console.log('[AUTH-CONFIG] NextAuth config being created', {
 fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:config',message:'NextAuth config',data:{hasRedirectProxyUrl:!!redirectProxyUrl,redirectProxyUrl,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,trustHost:true},timestamp:Date.now(),sessionId:'debug-session',runId:'redirect-proxy-fix',hypothesisId:'H9'})}).catch(()=>{});
 // #endregion
 
+// #region agent log - Before NextAuth initialization
+const authSecretHashForConfig = authSecret ? Buffer.from(authSecret).toString('base64').substring(0, 16) : 'MISSING';
+console.log('[NEXTAUTH-CONFIG-FINAL] Final NextAuth config values', {
+  hasRedirectProxyUrl: !!redirectProxyUrl,
+  redirectProxyUrl,
+  authUrl: process.env.AUTH_URL,
+  nextAuthUrl: process.env.NEXTAUTH_URL,
+  authSecretHash: authSecretHashForConfig,
+  authSecretLength: authSecret.length,
+  vercelUrl: process.env.VERCEL_URL,
+  isPreview: !!process.env.VERCEL_URL,
+  trustHost: true
+});
+fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:config:final',message:'Final NextAuth config',data:{hasRedirectProxyUrl:!!redirectProxyUrl,redirectProxyUrl,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,authSecretHash:authSecretHashForConfig,authSecretLength:authSecret.length,vercelUrl:process.env.VERCEL_URL,isPreview:!!process.env.VERCEL_URL,trustHost:true},timestamp:Date.now(),sessionId:'debug-session',runId:'state-verification-debug',hypothesisId:'H13'})}).catch(()=>{});
+// #endregion
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
