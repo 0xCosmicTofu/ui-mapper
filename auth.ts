@@ -15,8 +15,13 @@ const authSecret = getEnv("AUTH_SECRET");
 // Solution: Use AUTH_REDIRECT_PROXY_URL to always use production URL for OAuth callback
 const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://webflow-ui-mapper.vercel.app';
 
-if (process.env.VERCEL_URL) {
-  // Preview deployment detected
+// Determine if this is a preview deployment
+// VERCEL_URL is set on all Vercel deployments, but for production it matches the production domain
+const isPreviewDeployment = process.env.VERCEL_URL && 
+  !process.env.VERCEL_URL.includes('webflow-ui-mapper.vercel.app');
+
+if (isPreviewDeployment) {
+  // Preview deployment detected - use redirectProxyUrl to route OAuth through production
   if (!process.env.AUTH_REDIRECT_PROXY_URL) {
     process.env.AUTH_REDIRECT_PROXY_URL = `${productionUrl}/api/auth`;
   }
@@ -26,10 +31,9 @@ if (process.env.VERCEL_URL) {
   // If AUTH_URL is preview URL, cookies are set on preview domain and production can't read them
   process.env.AUTH_URL = productionUrl;
 } else {
-  // Production deployment
-  if (!process.env.AUTH_REDIRECT_PROXY_URL) {
-    process.env.AUTH_REDIRECT_PROXY_URL = `${productionUrl}/api/auth`;
-  }
+  // Production deployment - no redirectProxyUrl needed, standard OAuth flow
+  // Clear any existing AUTH_REDIRECT_PROXY_URL to avoid cross-domain cookie issues
+  delete process.env.AUTH_REDIRECT_PROXY_URL;
   
   const explicitUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL;
   if (explicitUrl) {
@@ -39,7 +43,8 @@ if (process.env.VERCEL_URL) {
   }
 }
 
-const redirectProxyUrl = process.env.AUTH_REDIRECT_PROXY_URL;
+// Only use redirectProxyUrl for preview deployments
+const redirectProxyUrl = isPreviewDeployment ? process.env.AUTH_REDIRECT_PROXY_URL : undefined;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
