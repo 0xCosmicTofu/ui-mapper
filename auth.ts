@@ -20,10 +20,16 @@ const hasAuthSecret = !!authSecret;
 // Google OAuth doesn't support wildcards, so we can't register every preview URL
 // Solution: Use AUTH_REDIRECT_PROXY_URL to always use production URL for OAuth callback
 // NextAuth will then redirect back to the preview URL after authentication
+// 
+// IMPORTANT: When AUTH_REDIRECT_PROXY_URL is set (either via env var or auto-detected),
+// BOTH preview and production need to use it for state verification to work correctly.
+// The state is created on preview with redirectProxyUrl, so production must also
+// recognize redirectProxyUrl when verifying the callback.
+const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://webflow-ui-mapper.vercel.app';
+
 if (process.env.VERCEL_URL) {
   // Preview deployment detected
   const previewUrl = `https://${process.env.VERCEL_URL}`;
-  const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://webflow-ui-mapper.vercel.app';
   
   // For preview deployments, use AUTH_REDIRECT_PROXY_URL to always use production callback URL
   // CRITICAL: Must include full path /api/auth, not just base URL
@@ -46,11 +52,31 @@ if (process.env.VERCEL_URL) {
     authUrl: process.env.AUTH_URL
   });
 } else {
-  // Production deployment - use explicit NEXTAUTH_URL or AUTH_URL if set
+  // Production deployment
+  // CRITICAL: If AUTH_REDIRECT_PROXY_URL is explicitly set (e.g., from preview deployments),
+  // we MUST use it here too, otherwise state verification will fail when callbacks
+  // from preview deployments come to production
+  // If not explicitly set, production should use its own URL
+  if (!process.env.AUTH_REDIRECT_PROXY_URL) {
+    // Production can optionally set AUTH_REDIRECT_PROXY_URL if it wants to use a different callback URL
+    // But by default, production should use its own URL
+    process.env.AUTH_REDIRECT_PROXY_URL = `${productionUrl}/api/auth`;
+  }
+  
+  // Use explicit NEXTAUTH_URL or AUTH_URL if set
   const explicitUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL;
   if (explicitUrl) {
     process.env.AUTH_URL = explicitUrl; // Ensure AUTH_URL is set for consistency
+  } else {
+    process.env.AUTH_URL = productionUrl;
   }
+  
+  console.log('[AUTH-INIT] Production deployment', {
+    productionUrl,
+    authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
+    authUrl: process.env.AUTH_URL,
+    note: 'Production will handle callbacks from both production and preview deployments'
+  });
 }
 
 const nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
@@ -187,6 +213,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // CRITICAL: When using redirectProxyUrl, the callback goes to production
+      // but we need to redirect back to the preview URL if that's where the user started
+      // NextAuth preserves the original callbackUrl in the state, so url should contain it
+      
+      // If url is relative, resolve it against baseUrl
+      let targetUrl = url;
+      try {
+        const parsed = new URL(url);
+        // If it's an absolute URL, check if it's a preview URL (contains VERCEL_URL pattern)
+        // If so, use it directly to redirect back to preview
+        if (parsed.hostname.includes('-') && parsed.hostname.includes('.vercel.app')) {
+          // This is a preview URL - use it directly
+          targetUrl = url;
+        } else if (parsed.origin === baseUrl) {
+          // Same origin - use it
+          targetUrl = url;
+        } else {
+          // Different origin - resolve relative to baseUrl
+          targetUrl = new URL(url, baseUrl).toString();
+        }
+      } catch {
+        // url is relative, resolve against baseUrl
+        targetUrl = new URL(url, baseUrl).toString();
+      }
+      
+      // #region agent log
+      const isProduction = baseUrl.includes('webflow-ui-mapper.vercel.app') && !baseUrl.includes('-');
+      const isPreviewUrl = targetUrl.includes('-') && targetUrl.includes('.vercel.app');
+      console.log('[REDIRECT-CALLBACK] Redirect callback', {
+        url,
+        baseUrl,
+        targetUrl,
+        isProduction,
+        isPreviewUrl,
+        vercelUrl: process.env.VERCEL_URL,
+        hasRedirectProxyUrl: !!process.env.AUTH_REDIRECT_PROXY_URL
+      });
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:redirect:callback',message:'Redirect callback',data:{url,baseUrl,targetUrl,isProduction,isPreviewUrl,vercelUrl:process.env.VERCEL_URL,hasRedirectProxyUrl:!!process.env.AUTH_REDIRECT_PROXY_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'redirect-callback-fix',hypothesisId:'H12'})}).catch(()=>{});
+      // #endregion
+      
+      return targetUrl;
     },
   },
 });
