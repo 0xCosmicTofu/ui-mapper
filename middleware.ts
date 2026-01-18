@@ -6,25 +6,8 @@ import authConfig from "./auth.config.edge";
 const { auth } = NextAuth(authConfig);
 
 export default async function middleware(req: NextRequest) {
-  // #region agent log
-  const middlewareStart = Date.now();
-  const pathname = req.nextUrl.pathname;
-  console.log('[MIDDLEWARE-ENTRY] Middleware executing', { pathname, url: req.url, timestamp: middlewareStart });
-  // #endregion
-
   const session = await auth();
-  
-  // #region agent log
-  console.log('[MIDDLEWARE-SESSION] Session check result', {
-    pathname,
-    hasSession: !!session,
-    sessionType: typeof session,
-    sessionKeys: session ? Object.keys(session) : null,
-    sessionUser: session?.user ? { email: session.user.email, name: session.user.name } : null,
-    sessionExpires: session?.expires,
-    isSessionTruthy: session ? true : false,
-  });
-  // #endregion
+  const pathname = req.nextUrl.pathname;
 
   // Public routes
   const publicRoutes = ['/auth/signin', '/auth/signup', '/auth/error'];
@@ -35,9 +18,6 @@ export default async function middleware(req: NextRequest) {
   if (isPublicRoute || isApiRoute) {
     // If authenticated user tries to access auth pages, redirect to home
     if (session && pathname.startsWith('/auth') && pathname !== '/auth/error') {
-      // #region agent log
-      console.log('[MIDDLEWARE-AUTH-REDIRECT] Authenticated user on auth page, redirecting to home', { pathname });
-      // #endregion
       return NextResponse.redirect(new URL('/', req.url));
     }
     return NextResponse.next();
@@ -45,17 +25,10 @@ export default async function middleware(req: NextRequest) {
 
   // Protect all other routes - require authentication
   if (!session) {
-    // #region agent log
-    console.log('[MIDDLEWARE-PROTECT] No session, redirecting to signin', { pathname });
-    // #endregion
     const signInUrl = new URL('/auth/signin', req.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
   }
-
-  // #region agent log
-  console.log('[MIDDLEWARE-ALLOW] Session valid, allowing access', { pathname, userEmail: session?.user?.email });
-  // #endregion
 
   return NextResponse.next();
 }

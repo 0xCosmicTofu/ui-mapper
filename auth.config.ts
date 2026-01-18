@@ -22,27 +22,8 @@ const googleProvider = googleClientId && googleClientSecret
   ? Google({
       clientId: googleClientId,
       clientSecret: googleClientSecret,
-      // #region agent log
-      // Log provider configuration
-      // #endregion
     })
   : null;
-
-// #region agent log
-if (googleProvider) {
-  console.log('[GOOGLE-PROVIDER] Google OAuth provider configured', {
-    hasClientId: !!googleClientId,
-    hasClientSecret: !!googleClientSecret,
-    clientIdLength: googleClientId?.length || 0,
-    clientSecretLength: googleClientSecret?.length || 0,
-  });
-} else {
-  console.log('[GOOGLE-PROVIDER] Google OAuth provider NOT configured', {
-    hasClientId: !!googleClientId,
-    hasClientSecret: !!googleClientSecret,
-  });
-}
-// #endregion
 
 export default {
   providers: [
