@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createHmac } from "crypto";
 import { preprocessHTML } from "../utils/html-preprocessor";
 
 export interface ScrapeResult {
@@ -19,6 +20,7 @@ export class WebScraper {
 
   /**
    * Generate a signed ScreenshotOne URL
+   * If secret key is provided, the URL is signed with HMAC-SHA256
    */
   private generateScreenshotUrl(targetUrl: string): string | null {
     if (!this.screenshotOneAccessKey) {
@@ -26,9 +28,8 @@ export class WebScraper {
       return null;
     }
 
-    // Build the ScreenshotOne API URL
-    // Using query parameters for simplicity (no signature required for basic usage)
-    const params = new URLSearchParams({
+    // Build the query parameters (order matters for signature)
+    const params: Record<string, string> = {
       access_key: this.screenshotOneAccessKey,
       url: targetUrl,
       viewport_width: "1280",
@@ -40,9 +41,22 @@ export class WebScraper {
       block_chats: "true",
       cache: "true",
       cache_ttl: "86400", // 24 hours
-    });
+    };
 
-    return `https://api.screenshotone.com/take?${params.toString()}`;
+    // Build query string
+    const queryString = new URLSearchParams(params).toString();
+
+    // If secret key is provided, sign the request
+    if (this.screenshotOneSecretKey) {
+      const signature = createHmac("sha256", this.screenshotOneSecretKey)
+        .update(queryString)
+        .digest("hex");
+      
+      return `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
+    }
+
+    // Without secret key, return unsigned URL (less secure but still works)
+    return `https://api.screenshotone.com/take?${queryString}`;
   }
 
   async scrape(url: string): Promise<ScrapeResult> {
@@ -75,6 +89,7 @@ export class WebScraper {
         processedHtmlLength: html.length,
         title,
         hasScreenshot: !!screenshotPath,
+        isSigned: !!this.screenshotOneSecretKey,
       });
 
       return {
