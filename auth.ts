@@ -26,15 +26,14 @@ if (process.env.VERCEL_URL) {
   // CRITICAL: Must include full path /api/auth, not just base URL
   // This ensures OAuth callback always goes to the registered production URL
   // NextAuth will automatically redirect back to the preview URL after auth
-  // IMPORTANT: When using redirectProxyUrl, AUTH_URL should be the proxy URL, not the preview URL
-  // This is because NextAuth uses AUTH_URL to construct callback URLs
   if (!process.env.AUTH_REDIRECT_PROXY_URL) {
     process.env.AUTH_REDIRECT_PROXY_URL = `${productionUrl}/api/auth`;
   }
   
-  // CRITICAL FIX: When using redirectProxyUrl, AUTH_URL must also point to the proxy
-  // Otherwise NextAuth will try to construct callback URLs using the preview URL
-  process.env.AUTH_URL = process.env.AUTH_REDIRECT_PROXY_URL;
+  // IMPORTANT: AUTH_URL should remain as the preview URL for NextAuth to work correctly
+  // redirectProxyUrl handles the OAuth callback URL specifically
+  // AUTH_URL is used for other NextAuth operations and should match the actual deployment
+  process.env.AUTH_URL = previewUrl;
   
   console.log('[AUTH-INIT] Preview deployment detected - using AUTH_REDIRECT_PROXY_URL', {
     vercelUrl: process.env.VERCEL_URL,
