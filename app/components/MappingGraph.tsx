@@ -230,6 +230,17 @@ export function MappingGraph({
       const component = componentNodeMap.get(column.componentId);
       if (!component) return;
       
+      // Build slot-to-source mapping for this component
+      const slotToSource = new Map<string, string>();
+      const fieldMappingsForComponent = componentToFieldMappings.get(component.name);
+      if (fieldMappingsForComponent) {
+        fieldMappingsForComponent.forEach((mappings, modelName) => {
+          mappings.forEach(({ fieldPath, slotName }) => {
+            slotToSource.set(slotName, fieldPath);
+          });
+        });
+      }
+      
       // Create component node (UI Atom)
       nodePositions.set(column.componentId, { 
         x: column.componentX, 
@@ -251,16 +262,28 @@ export function MappingGraph({
                 UI Component
               </div>
               <div className="space-y-2 mt-4">
-                {component.slots.map((slot, idx) => (
-                  <div 
-                    key={slot.name}
-                    className="text-sm px-3 py-2 bg-purple-100 dark:bg-purple-950/50 rounded-md border-2 border-purple-300 dark:border-purple-700"
-                    style={{ marginTop: idx > 0 ? '6px' : '0' }}
-                  >
-                    <span className="font-semibold" style={{ color: textColor }}>{slot.name}</span>
-                    <span className="ml-2.5 opacity-70" style={{ color: textColor }}>({slot.type})</span>
-                  </div>
-                ))}
+                {component.slots.map((slot, idx) => {
+                  const sourceField = slotToSource.get(slot.name);
+                  return (
+                    <div 
+                      key={slot.name}
+                      className="text-sm px-3 py-2 bg-purple-100 dark:bg-purple-950/50 rounded-md border-2 border-purple-300 dark:border-purple-700"
+                      style={{ marginTop: idx > 0 ? '6px' : '0' }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span>
+                          <span className="font-semibold" style={{ color: textColor }}>{slot.name}</span>
+                          <span className="ml-1.5 opacity-60" style={{ color: textColor }}>({slot.type})</span>
+                        </span>
+                        {sourceField && (
+                          <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded border border-blue-300 dark:border-blue-600 whitespace-nowrap">
+                            ← {sourceField}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ),
@@ -269,7 +292,7 @@ export function MappingGraph({
           background: "#f3e8ff",
           border: "3px solid #8b5cf6",
           borderRadius: "10px",
-          width: 300,
+          width: 340,
           minHeight: 140,
         },
       });
@@ -370,12 +393,15 @@ export function MappingGraph({
               const componentPos = nodePositions.get(componentId)!;
               
               // Check if they're in the same column (same X position)
-              if (Math.abs(modelPos.x - componentPos.x) < 10) {
+              // Only add one edge per model-component pair (avoid duplicates)
+              const edgeKey = `${modelId}-${componentId}`;
+              const existingEdge = edges.find(e => e.id === edgeKey);
+              
+              if (Math.abs(modelPos.x - componentPos.x) < 10 && !existingEdge) {
                 edges.push({
-                  id: `${modelId}-${componentId}-${slotName}-${edges.length}`,
+                  id: edgeKey,
                   source: modelId,
                   target: componentId,
-                  label: `${slotName} ← ${fieldPath}`,
                   type: "straight",
                   animated: true,
                   style: { 
@@ -386,22 +412,6 @@ export function MappingGraph({
                     type: MarkerType.ArrowClosed,
                     color: "#8b5cf6",
                   },
-                  labelStyle: {
-                    fill: "#581c87", // Darker purple for better contrast (WCAG AA)
-                    fontWeight: 700,
-                    fontSize: 13,
-                  },
-                  labelBgStyle: {
-                    fill: "#ffffff",
-                    fillOpacity: 0.98,
-                    stroke: "#8b5cf6",
-                    strokeWidth: 2,
-                    rx: 6,
-                    ry: 6,
-                  },
-                  labelBgPadding: [8, 10],
-                  labelBgBorderRadius: 6,
-                  labelShowBg: true,
                 });
               }
             }
@@ -489,7 +499,11 @@ export function MappingGraph({
           </div>
           <div className="flex items-center gap-2.5">
             <div className="w-4 h-0.5 bg-purple-600 dark:bg-purple-400 flex-shrink-0"></div>
-            <span><strong className="text-zinc-900 dark:text-zinc-100 font-semibold">Arrows</strong> = Field-to-Slot mappings</span>
+            <span><strong className="text-zinc-900 dark:text-zinc-100 font-semibold">Arrows</strong> = Data flow direction</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="text-xs font-medium px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded border border-blue-300 dark:border-blue-600 flex-shrink-0">← field</div>
+            <span><strong className="text-zinc-900 dark:text-zinc-100 font-semibold">Blue tags</strong> = Source field mapping</span>
           </div>
           <div className="pt-3 border-t-2 border-zinc-300 dark:border-zinc-700 text-xs text-zinc-600 dark:text-zinc-400">
             <strong className="font-semibold">Tip:</strong> Drag nodes to rearrange. Edges stay connected. Scroll horizontally to see all components.
