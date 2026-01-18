@@ -96,6 +96,20 @@ export default function Home() {
       const pollStatus = async () => {
         try {
           const statusResponse = await fetch(`/api/analyze/status/${jobId}`);
+          
+          // Handle 404 - job expired or server restarted
+          if (statusResponse.status === 404) {
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            setState({
+              status: "error",
+              error: "Analysis session expired. This can happen after a deployment or server restart. Please try analyzing again.",
+            });
+            return;
+          }
+          
           const statusResult = await statusResponse.json();
 
           if (!statusResult.success) {
@@ -115,16 +129,16 @@ export default function Home() {
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
-      }
+            }
 
-      setState({
-        status: "success",
+            setState({
+              status: "success",
               progress: 100,
               stage: "complete",
               message: "Analysis complete!",
               analysis: statusResult.result?.analysis,
               webflowExport: statusResult.result?.webflowExport,
-      });
+            });
           } else if (statusResult.status === "error") {
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
