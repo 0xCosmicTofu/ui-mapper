@@ -23,6 +23,16 @@ export class WebScraper {
    * If secret key is provided, the URL is signed with HMAC-SHA256
    */
   private generateScreenshotUrl(targetUrl: string): string | null {
+    // #region agent log
+    console.log("[SCREENSHOT-DEBUG] generateScreenshotUrl called", {
+      targetUrl,
+      hasAccessKey: !!this.screenshotOneAccessKey,
+      accessKeyLength: this.screenshotOneAccessKey?.length || 0,
+      hasSecretKey: !!this.screenshotOneSecretKey,
+      secretKeyLength: this.screenshotOneSecretKey?.length || 0,
+    });
+    // #endregion
+
     if (!this.screenshotOneAccessKey) {
       console.log("[SCREENSHOT] ScreenshotOne access key not configured, skipping screenshot");
       return null;
@@ -46,17 +56,44 @@ export class WebScraper {
     // Build query string
     const queryString = new URLSearchParams(params).toString();
 
+    // #region agent log
+    console.log("[SCREENSHOT-DEBUG] Query string built", {
+      queryStringLength: queryString.length,
+      queryStringPreview: queryString.substring(0, 100) + "...",
+    });
+    // #endregion
+
     // If secret key is provided, sign the request
     if (this.screenshotOneSecretKey) {
       const signature = createHmac("sha256", this.screenshotOneSecretKey)
         .update(queryString)
         .digest("hex");
       
-      return `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
+      const signedUrl = `https://api.screenshotone.com/take?${queryString}&signature=${signature}`;
+      
+      // #region agent log
+      console.log("[SCREENSHOT-DEBUG] Signed URL generated", {
+        signatureLength: signature.length,
+        signaturePreview: signature.substring(0, 16) + "...",
+        fullUrlLength: signedUrl.length,
+        urlPreview: signedUrl.substring(0, 150) + "...",
+      });
+      // #endregion
+      
+      return signedUrl;
     }
 
+    const unsignedUrl = `https://api.screenshotone.com/take?${queryString}`;
+    
+    // #region agent log
+    console.log("[SCREENSHOT-DEBUG] Unsigned URL generated", {
+      fullUrlLength: unsignedUrl.length,
+      urlPreview: unsignedUrl.substring(0, 150) + "...",
+    });
+    // #endregion
+
     // Without secret key, return unsigned URL (less secure but still works)
-    return `https://api.screenshotone.com/take?${queryString}`;
+    return unsignedUrl;
   }
 
   async scrape(url: string): Promise<ScrapeResult> {
@@ -82,6 +119,15 @@ export class WebScraper {
 
       // Generate screenshot URL using ScreenshotOne
       const screenshotPath = this.generateScreenshotUrl(url) || "";
+
+      // #region agent log
+      console.log("[SCREENSHOT-DEBUG] Final screenshotPath", {
+        screenshotPath: screenshotPath || "(empty)",
+        screenshotPathLength: screenshotPath.length,
+        startsWithHttps: screenshotPath.startsWith("https://"),
+        containsScreenshotOne: screenshotPath.includes("screenshotone"),
+      });
+      // #endregion
 
       console.log("[SCRAPER] Scrape completed", {
         url,
