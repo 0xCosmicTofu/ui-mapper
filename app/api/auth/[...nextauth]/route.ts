@@ -72,21 +72,38 @@ export const GET = async (req: NextRequest) => {
     const callbackError = req.nextUrl.searchParams.get('error');
     const callbackErrorDescription = req.nextUrl.searchParams.get('error_description');
     
-    // CRITICAL: Log Configuration errors immediately
+    // CRITICAL: Log Configuration errors immediately with full context
     if (callbackError === 'Configuration' || errorFromRedirect === 'Configuration') {
-      console.error('[CONFIGURATION-ERROR] NextAuth Configuration error detected!', {
+      console.error('[CONFIGURATION-ERROR] ==========================================');
+      console.error('[CONFIGURATION-ERROR] NextAuth Configuration error detected!');
+      console.error('[CONFIGURATION-ERROR] Request details:', {
         pathname,
         isCallbackRequest,
         callbackError,
         callbackErrorDescription,
         errorFromRedirect,
         requestUrl: req.url,
+        requestOrigin: new URL(req.url).origin,
+        requestHost: req.headers.get('host'),
+        xForwardedHost: req.headers.get('x-forwarded-host'),
+        xForwardedProto: req.headers.get('x-forwarded-proto'),
+      });
+      console.error('[CONFIGURATION-ERROR] Environment variables:', {
         authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
         authUrl: process.env.AUTH_URL,
         nextAuthUrl: process.env.NEXTAUTH_URL,
         vercelUrl: process.env.VERCEL_URL,
-        redirectLocation
+        hasAuthSecret: !!process.env.AUTH_SECRET,
+        authSecretLength: process.env.AUTH_SECRET?.length || 0,
       });
+      console.error('[CONFIGURATION-ERROR] Response details:', {
+        status,
+        redirectLocation: redirectLocation?.substring(0, 200),
+        isOAuthRedirect,
+        decodedRedirectUri,
+      });
+      console.error('[CONFIGURATION-ERROR] ==========================================');
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:CONFIGURATION-ERROR',message:'Configuration error detected',data:{pathname,isCallbackRequest,callbackError,callbackErrorDescription,errorFromRedirect,requestUrl:req.url,requestOrigin:new URL(req.url).origin,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,vercelUrl:process.env.VERCEL_URL,redirectLocation:redirectLocation?.substring(0,200),decodedRedirectUri},timestamp:Date.now(),sessionId:'debug-session',runId:'configuration-error-debug',hypothesisId:'H10'})}).catch(()=>{});
     }
     
     console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {
