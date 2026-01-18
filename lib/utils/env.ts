@@ -26,3 +26,23 @@ export function getEnvBool(key: string, defaultValue: boolean = false): boolean 
   return ['true', '1', 'yes'].includes(value.toLowerCase());
 }
 
+/**
+ * Validate that required environment variables are set
+ * @param keys - Array of environment variable keys to validate
+ * @throws Error if any required env var is missing
+ */
+export function validateEnv(keys: string[]): void {
+  const missing: string[] = [];
+  
+  for (const key of keys) {
+    const value = getEnv(key);
+    if (!value) {
+      missing.push(key);
+    }
+  }
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+

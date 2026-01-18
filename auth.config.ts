@@ -1,78 +1,33 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { getEnv } from "./lib/utils/env";
 
-// Dynamically import Prisma to avoid Edge Runtime issues
+// Lazy-load Prisma and bcrypt to avoid Edge runtime issues
 const getPrisma = async () => {
-  // #region agent log
-  console.log("[DEBUG] getPrisma called", {
-    location: "auth.config.ts:getPrisma",
-    timestamp: new Date().toISOString(),
-    hypothesisId: "B",
-  });
-  // #endregion
-  
   const { prisma } = await import("./lib/prisma");
   return prisma;
 };
 
-// #region agent log
-console.log("[DEBUG] Auth config loading", {
-  location: "auth.config.ts:config",
-  hasAuthSecret: !!process.env.AUTH_SECRET,
-  authSecretLength: process.env.AUTH_SECRET?.length || 0,
-  nextAuthUrl: process.env.NEXTAUTH_URL,
-  hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
-  hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-  googleClientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
-  googleClientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
-  googleClientIdPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 10) || "none",
-  nodeEnv: process.env.NODE_ENV,
-  timestamp: new Date().toISOString(),
-  hypothesisId: "C",
-});
-// #endregion
+const bcryptCompare = async (password: string, hash: string): Promise<boolean> => {
+  const bcrypt = await import("bcryptjs");
+  return bcrypt.compare(password, hash);
+};
 
-const googleProvider = getEnv("GOOGLE_CLIENT_ID") && getEnv("GOOGLE_CLIENT_SECRET")
+// Google OAuth provider (only if credentials are provided)
+const googleClientId = getEnv("GOOGLE_CLIENT_ID");
+const googleClientSecret = getEnv("GOOGLE_CLIENT_SECRET");
+
+const googleProvider = googleClientId && googleClientSecret
   ? Google({
-      clientId: getEnv("GOOGLE_CLIENT_ID"),
-      clientSecret: getEnv("GOOGLE_CLIENT_SECRET"),
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
     })
   : null;
 
-// #region agent log
-if (googleProvider) {
-  console.log("[DEBUG] Google OAuth provider configured", {
-    location: "auth.config.ts:providers:google",
-    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
-    hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
-    clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
-    nextAuthUrl: process.env.NEXTAUTH_URL,
-    expectedCallbackUrl: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google` : "not set",
-    timestamp: new Date().toISOString(),
-    hypothesisId: "B",
-  });
-} else {
-  console.log("[DEBUG] Google OAuth provider NOT configured", {
-    location: "auth.config.ts:providers:google",
-    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
-    hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
-    clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
-    timestamp: new Date().toISOString(),
-    hypothesisId: "B",
-  });
-}
-// #endregion
-
 export default {
   providers: [
-    // Google OAuth (optional - only enabled if credentials are provided)
     ...(googleProvider ? [googleProvider] : []),
-    // Email/Password authentication
     Credentials({
       name: "Credentials",
       credentials: {
@@ -93,12 +48,12 @@ export default {
           return null;
         }
 
-        const isPasswordValid = await bcrypt.compare(
+        const isValid = await bcryptCompare(
           credentials.password as string,
           user.password
         );
 
-        if (!isPasswordValid) {
+        if (!isValid) {
           return null;
         }
 
