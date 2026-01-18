@@ -20,6 +20,17 @@ const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https
 const isPreviewDeployment = process.env.VERCEL_URL && 
   !process.env.VERCEL_URL.includes('webflow-ui-mapper.vercel.app');
 
+// #region agent log
+console.log("[AUTH-CONFIG-DEBUG] Environment detection", {
+  vercelUrl: process.env.VERCEL_URL || "(not set)",
+  isPreviewDeployment,
+  productionUrl,
+  existingAuthUrl: process.env.AUTH_URL || "(not set)",
+  existingNextAuthUrl: process.env.NEXTAUTH_URL || "(not set)",
+  existingRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL || "(not set)",
+});
+// #endregion
+
 if (isPreviewDeployment) {
   // Preview deployment detected - use redirectProxyUrl to route OAuth through production
   if (!process.env.AUTH_REDIRECT_PROXY_URL) {
@@ -45,6 +56,15 @@ if (isPreviewDeployment) {
 
 // Only use redirectProxyUrl for preview deployments
 const redirectProxyUrl = isPreviewDeployment ? process.env.AUTH_REDIRECT_PROXY_URL : undefined;
+
+// #region agent log
+console.log("[AUTH-CONFIG-DEBUG] Final configuration", {
+  isPreviewDeployment,
+  redirectProxyUrl: redirectProxyUrl || "(none)",
+  finalAuthUrl: process.env.AUTH_URL || "(not set)",
+  willUseCrossOriginCookies: !!redirectProxyUrl,
+});
+// #endregion
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
