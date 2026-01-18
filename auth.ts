@@ -15,13 +15,14 @@ const authSecret = getEnv("AUTH_SECRET");
 // Solution: Use AUTH_REDIRECT_PROXY_URL to always use production URL for OAuth callback
 const productionUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://webflow-ui-mapper.vercel.app';
 
-// Determine if this is a preview deployment
-// VERCEL_URL is set on all Vercel deployments, but for production it matches the production domain
-const isPreviewDeployment = process.env.VERCEL_URL && 
-  !process.env.VERCEL_URL.includes('webflow-ui-mapper.vercel.app');
+// Determine if this is a preview deployment using VERCEL_ENV
+// VERCEL_ENV is "production" for production, "preview" for preview deployments
+// VERCEL_URL is always the deployment-specific URL, not the production alias
+const isPreviewDeployment = process.env.VERCEL_ENV === "preview";
 
 // #region agent log
 console.log("[AUTH-CONFIG-DEBUG] Environment detection", {
+  vercelEnv: process.env.VERCEL_ENV || "(not set)",
   vercelUrl: process.env.VERCEL_URL || "(not set)",
   isPreviewDeployment,
   productionUrl,
