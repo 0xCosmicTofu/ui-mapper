@@ -70,6 +70,17 @@ fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{metho
 // Extract redirectProxyUrl if set for preview deployments
 const redirectProxyUrl = process.env.AUTH_REDIRECT_PROXY_URL;
 
+// #region agent log
+console.log('[AUTH-CONFIG] NextAuth config being created', {
+  hasRedirectProxyUrl: !!redirectProxyUrl,
+  redirectProxyUrl,
+  authUrl: process.env.AUTH_URL,
+  nextAuthUrl: process.env.NEXTAUTH_URL,
+  trustHost: true
+});
+fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.ts:NextAuth:config',message:'NextAuth config',data:{hasRedirectProxyUrl:!!redirectProxyUrl,redirectProxyUrl,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,trustHost:true},timestamp:Date.now(),sessionId:'debug-session',runId:'redirect-proxy-fix',hypothesisId:'H9'})}).catch(()=>{});
+// #endregion
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
