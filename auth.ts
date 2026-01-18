@@ -148,6 +148,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // AUTH_REDIRECT_PROXY_URL is set for preview deployments to use production callback URL
   // Pass redirectProxyUrl in config if set (NextAuth v5 requires this)
   ...(redirectProxyUrl ? { redirectProxyUrl } : {}),
+  // CRITICAL: When using redirectProxyUrl for cross-domain callbacks (preview → production),
+  // cookies must be configured with sameSite: "none" and secure: true
+  // This ensures the state cookie is sent from preview domain to production domain
+  cookies: redirectProxyUrl ? {
+    state: {
+      name: "next-auth.state",
+      options: {
+        httpOnly: true,
+        secure: true, // Required for cross-domain
+        sameSite: "none" as const, // Required for cross-domain (preview → production)
+        path: "/",
+        maxAge: 900, // 15 minutes
+      },
+    },
+    pkceCodeVerifier: {
+      name: "next-auth.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none" as const,
+        path: "/",
+        maxAge: 900,
+      },
+    },
+    callbackUrl: {
+      name: "next-auth.callback-url",
+      options: {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none" as const,
+        path: "/",
+        maxAge: 900,
+      },
+    },
+  } : undefined,
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {
