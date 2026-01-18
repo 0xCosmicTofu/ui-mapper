@@ -67,13 +67,17 @@ fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{metho
 // CRITICAL FIX: We've already overridden NEXTAUTH_URL/AUTH_URL above for preview deployments
 // With trustHost: true, NextAuth will use request headers, but having the correct AUTH_URL
 // ensures consistency and prevents fallback to production URL
+// Extract redirectProxyUrl if set for preview deployments
+const redirectProxyUrl = process.env.AUTH_REDIRECT_PROXY_URL;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
   trustHost: true, // Trust Vercel's Host header for auto URL detection
   // AUTH_URL/NEXTAUTH_URL have been overridden above for preview deployments
   // AUTH_REDIRECT_PROXY_URL is set for preview deployments to use production callback URL
-  // trustHost: true ensures headers are also respected
+  // Pass redirectProxyUrl in config if set (NextAuth v5 requires this)
+  ...(redirectProxyUrl ? { redirectProxyUrl } : {}),
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {
