@@ -286,7 +286,7 @@ export default function Home() {
         )}
 
         {state.status === "success" && state.analysis && (
-          <>
+          <div className="space-y-10">
             {/* Export Actions */}
             <div className="container mx-auto px-4 max-w-[1440px]">
             <Card>
@@ -553,7 +553,7 @@ export default function Home() {
                 </Card>
               </div>
             )}
-          </>
+          </div>
         )}
       </main>
     </div>
