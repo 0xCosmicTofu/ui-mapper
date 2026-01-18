@@ -72,6 +72,23 @@ export const GET = async (req: NextRequest) => {
     const callbackError = req.nextUrl.searchParams.get('error');
     const callbackErrorDescription = req.nextUrl.searchParams.get('error_description');
     
+    // CRITICAL: Log Configuration errors immediately
+    if (callbackError === 'Configuration' || errorFromRedirect === 'Configuration') {
+      console.error('[CONFIGURATION-ERROR] NextAuth Configuration error detected!', {
+        pathname,
+        isCallbackRequest,
+        callbackError,
+        callbackErrorDescription,
+        errorFromRedirect,
+        requestUrl: req.url,
+        authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
+        authUrl: process.env.AUTH_URL,
+        nextAuthUrl: process.env.NEXTAUTH_URL,
+        vercelUrl: process.env.VERCEL_URL,
+        redirectLocation
+      });
+    }
+    
     console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {
       status,
       pathname,
