@@ -13,16 +13,20 @@ const authSecret = getEnv("AUTH_SECRET");
 const authSecretLength = authSecret.length;
 const hasAuthSecret = !!authSecret;
 
-// Auto-detect NEXTAUTH_URL in production (Vercel sets VERCEL_URL)
-// Only use explicit NEXTAUTH_URL if it's not localhost in production
-let nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
-if (!nextAuthUrl || (process.env.NODE_ENV === 'production' && nextAuthUrl.includes('localhost'))) {
-  // In production, prefer VERCEL_URL (auto-set by Vercel) or construct from headers
-  nextAuthUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.VERCEL 
-      ? `https://${process.env.VERCEL}`
-      : '';
+// CRITICAL: For preview deployments, ALWAYS use VERCEL_URL (preview URL)
+// Only use explicit NEXTAUTH_URL for production deployments
+// This prevents OAuth callback mismatches on preview deployments
+let nextAuthUrl = '';
+if (process.env.VERCEL_URL) {
+  // Preview deployment - use VERCEL_URL (auto-set by Vercel)
+  nextAuthUrl = `https://${process.env.VERCEL_URL}`;
+} else {
+  // Production deployment - use explicit NEXTAUTH_URL or AUTH_URL
+  nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || '';
+  // Fallback: if no explicit URL and in production, try to construct from VERCEL env
+  if (!nextAuthUrl && process.env.VERCEL) {
+    nextAuthUrl = `https://${process.env.VERCEL}`;
+  }
 }
 
 const hasNextAuthUrl = !!nextAuthUrl;
@@ -44,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: authSecret,
   trustHost: true, // Trust Vercel's Host header for auto URL detection
+  // Don't set baseUrl - let trustHost handle it automatically
   ...authConfig,
   callbacks: {
     async signIn({ user, account }) {

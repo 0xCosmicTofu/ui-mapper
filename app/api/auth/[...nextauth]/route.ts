@@ -13,14 +13,36 @@ export const GET = async (req: NextRequest) => {
   // #endregion
   
   try {
+    // #region agent log
+    const requestHeaders = {
+      host: req.headers.get('host'),
+      'x-forwarded-host': req.headers.get('x-forwarded-host'),
+      'x-forwarded-proto': req.headers.get('x-forwarded-proto'),
+      origin: req.headers.get('origin'),
+      referer: req.headers.get('referer'),
+    };
+    console.log('[NEXTAUTH-GET] Request headers for URL detection', requestHeaders);
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:headers',message:'Request headers',data:requestHeaders,timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+    
     const response = await handlers.GET(req);
     // #region agent log
     const status = response?.status;
     const redirectLocation = response?.headers?.get('location') || '';
     const isErrorRedirect = redirectLocation.includes('/auth/error');
     const errorFromRedirect = isErrorRedirect && redirectLocation ? new URL(redirectLocation, req.url).searchParams.get('error') : null;
-    console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {status,redirectLocation,isErrorRedirect,errorFromRedirect});
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,redirectLocation,isErrorRedirect,errorFromRedirect},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H4'})}).catch(()=>{});
+    const setCookieHeaders = response?.headers?.get('set-cookie') || '';
+    const hasSessionCookie = setCookieHeaders.includes('session-token');
+    console.log('[NEXTAUTH-GET-RESPONSE] NextAuth GET response', {
+      status,
+      redirectLocation,
+      isErrorRedirect,
+      errorFromRedirect,
+      hasSessionCookie,
+      redirectLocationOrigin: redirectLocation ? new URL(redirectLocation, req.url).origin : null,
+      requestOrigin: new URL(req.url).origin
+    });
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,redirectLocation,isErrorRedirect,errorFromRedirect,hasSessionCookie,redirectLocationOrigin:redirectLocation ? new URL(redirectLocation, req.url).origin : null,requestOrigin:new URL(req.url).origin},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H4'})}).catch(()=>{});
     // #endregion
     return response;
   } catch (error) {
