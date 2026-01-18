@@ -48,6 +48,7 @@ export class WebScraper {
       viewport_height: "800",
       device_scale_factor: "1",
       format: "webp",
+      full_page: "true", // Capture the entire page, not just viewport
       block_ads: "true",
       block_cookie_banners: "true",
       block_chats: "true",
