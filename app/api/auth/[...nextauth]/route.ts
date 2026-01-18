@@ -38,6 +38,24 @@ export const GET = async (req: NextRequest) => {
   // #endregion
   
   try {
+    // #region agent log - BEFORE calling handlers.GET
+    const beforeState = {
+      pathname,
+      isSignIn,
+      isCallback,
+      provider,
+      requestUrl: req.url,
+      requestOrigin: new URL(req.url).origin,
+      hasRedirectProxyUrl: !!process.env.AUTH_REDIRECT_PROXY_URL,
+      redirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
+      authUrl: process.env.AUTH_URL,
+      vercelUrl: process.env.VERCEL_URL,
+      isPreview: !!process.env.VERCEL_URL
+    };
+    console.log('[NEXTAUTH-GET-BEFORE] Before calling handlers.GET', beforeState);
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:before',message:'Before handlers.GET',data:beforeState,timestamp:Date.now(),sessionId:'debug-session',runId:'callback-url-investigation',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
     const response = await handlers.GET(req);
     // #region agent log
     const status = response?.status;
@@ -71,6 +89,28 @@ export const GET = async (req: NextRequest) => {
     const isCallbackRequest = pathname.includes('callback');
     const callbackError = req.nextUrl.searchParams.get('error');
     const callbackErrorDescription = req.nextUrl.searchParams.get('error_description');
+    const callbackCode = req.nextUrl.searchParams.get('code');
+    const callbackState = req.nextUrl.searchParams.get('state');
+    
+    // #region agent log - Callback request analysis
+    if (isCallbackRequest) {
+      console.log('[OAUTH-CALLBACK] OAuth callback received', {
+        pathname,
+        callbackError,
+        callbackErrorDescription,
+        hasCode: !!callbackCode,
+        hasState: !!callbackState,
+        stateLength: callbackState?.length || 0,
+        requestUrl: req.url,
+        requestOrigin: new URL(req.url).origin,
+        isPreview: !!process.env.VERCEL_URL,
+        vercelUrl: process.env.VERCEL_URL,
+        authRedirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
+        authUrl: process.env.AUTH_URL
+      });
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:OAUTH-CALLBACK',message:'OAuth callback received',data:{pathname,callbackError,callbackErrorDescription,hasCode:!!callbackCode,hasState:!!callbackState,stateLength:callbackState?.length||0,requestUrl:req.url,requestOrigin:new URL(req.url).origin,isPreview:!!process.env.VERCEL_URL,vercelUrl:process.env.VERCEL_URL,authRedirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'callback-url-investigation',hypothesisId:'H2'})}).catch(()=>{});
+    }
+    // #endregion
     
     // CRITICAL: Log Configuration errors immediately with full context
     if (callbackError === 'Configuration' || errorFromRedirect === 'Configuration') {
@@ -126,8 +166,19 @@ export const GET = async (req: NextRequest) => {
     
     // CRITICAL: If we have a redirect_uri, log it prominently with full context
     if (decodedRedirectUri) {
+      const expectedCallbackUrl = process.env.AUTH_REDIRECT_PROXY_URL 
+        ? `${process.env.AUTH_REDIRECT_PROXY_URL}/callback/${provider || 'google'}`
+        : `${process.env.AUTH_URL || process.env.NEXTAUTH_URL || req.url.split('/api/auth')[0]}/api/auth/callback/${provider || 'google'}`;
+      const matchesProxy = decodedRedirectUri === expectedCallbackUrl || decodedRedirectUri.startsWith(process.env.AUTH_REDIRECT_PROXY_URL || '');
+      const matchesProduction = decodedRedirectUri.includes('webflow-ui-mapper.vercel.app');
+      const matchesPreview = decodedRedirectUri.includes(process.env.VERCEL_URL || '');
+      
       console.log('[OAUTH-CALLBACK-URL] ==========================================');
       console.log('[OAUTH-CALLBACK-URL] CALLBACK URL BEING SENT TO GOOGLE:', decodedRedirectUri);
+      console.log('[OAUTH-CALLBACK-URL] Expected (from redirectProxyUrl):', expectedCallbackUrl);
+      console.log('[OAUTH-CALLBACK-URL] Matches redirectProxyUrl:', matchesProxy);
+      console.log('[OAUTH-CALLBACK-URL] Matches production:', matchesProduction);
+      console.log('[OAUTH-CALLBACK-URL] Matches preview:', matchesPreview);
       console.log('[OAUTH-CALLBACK-URL] Full OAuth URL:', fullOAuthUrl?.substring(0, 300));
       console.log('[OAUTH-CALLBACK-URL] Request URL:', req.url);
       console.log('[OAUTH-CALLBACK-URL] AUTH_REDIRECT_PROXY_URL:', process.env.AUTH_REDIRECT_PROXY_URL);
@@ -135,6 +186,8 @@ export const GET = async (req: NextRequest) => {
       console.log('[OAUTH-CALLBACK-URL] NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
       console.log('[OAUTH-CALLBACK-URL] ==========================================');
       console.log('[OAUTH-CALLBACK-URL] This URL MUST match exactly what is in Google Cloud Console');
+      
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:OAUTH-CALLBACK-URL',message:'OAuth callback URL analysis',data:{decodedRedirectUri,expectedCallbackUrl,matchesProxy,matchesProduction,matchesPreview,hasRedirectProxyUrl:!!process.env.AUTH_REDIRECT_PROXY_URL,redirectProxyUrl:process.env.AUTH_REDIRECT_PROXY_URL,authUrl:process.env.AUTH_URL,nextAuthUrl:process.env.NEXTAUTH_URL,provider,requestUrl:req.url},timestamp:Date.now(),sessionId:'debug-session',runId:'callback-url-investigation',hypothesisId:'H1'})}).catch(()=>{});
     }
     fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/[...nextauth]/route.ts:GET:response',message:'NextAuth GET response',data:{status,pathname,isCallbackRequest,callbackError,callbackErrorDescription,redirectLocation:redirectLocation?.substring(0,200),isOAuthRedirect,redirectUri,decodedRedirectUri,isErrorRedirect,errorFromRedirect,hasSessionCookie,redirectLocationOrigin:redirectLocation ? new URL(redirectLocation, req.url).origin : null,requestOrigin:new URL(req.url).origin,requestUrl:req.url},timestamp:Date.now(),sessionId:'debug-session',runId:'oauth-callback-url-investigation',hypothesisId:'H7'})}).catch(()=>{});
     // #endregion
