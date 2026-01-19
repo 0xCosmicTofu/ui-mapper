@@ -30,8 +30,17 @@ export function StatusFooter({ analysisStatus, analysisMessage }: StatusFooterPr
       </div>
 
       {/* Right: Branding */}
-      <span className="text-xs text-muted-foreground uppercase tracking-wider">
-        Built by LimeStudio
+      <span className="text-muted-foreground uppercase tracking-wider" style={{ fontSize: "12px" }}>
+        Built by{" "}
+        <a
+          href="https://limestud.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          style={{ textDecoration: "none" }}
+        >
+          LimeStudio
+        </a>
       </span>
     </footer>
   );
