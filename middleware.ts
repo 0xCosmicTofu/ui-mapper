@@ -5,7 +5,15 @@ import authConfig from "./auth.config.edge";
 
 const { auth } = NextAuth(authConfig);
 
+// Skip auth for local UI development
+const skipAuth = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true" || process.env.NODE_ENV === "development";
+
 export default async function middleware(req: NextRequest) {
+  // Bypass auth entirely for local development
+  if (skipAuth) {
+    return NextResponse.next();
+  }
+
   const session = await auth();
   const pathname = req.nextUrl.pathname;
 
