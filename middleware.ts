@@ -5,12 +5,10 @@ import authConfig from "./auth.config.edge";
 
 const { auth } = NextAuth(authConfig);
 
-// Skip auth for local UI development
-const skipAuth = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true" || process.env.NODE_ENV === "development";
-
 export default async function middleware(req: NextRequest) {
-  // Bypass auth entirely for local development
-  if (skipAuth) {
+  // Bypass auth for mock data mode (checked at runtime, not build time)
+  const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+  if (useMockData) {
     return NextResponse.next();
   }
 
