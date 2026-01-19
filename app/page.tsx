@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertCircle, Download, FileJson, FileSpreadsheet } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+// Mock data for local UI development (remove import when merging to production)
+import { mockAnalysis, mockWebflowExport } from "@/lib/mock-data";
 
 type AnalysisState = {
   status: "idle" | "analyzing" | "success" | "error";
@@ -22,9 +24,23 @@ type AnalysisState = {
   error?: string;
 };
 
+// Check if mock data should be used (for local UI development)
+const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [state, setState] = useState<AnalysisState>({ status: "idle" });
+  const [state, setState] = useState<AnalysisState>(
+    useMockData
+      ? {
+          status: "success",
+          progress: 100,
+          stage: "complete",
+          message: "Mock data loaded for UI development",
+          analysis: mockAnalysis,
+          webflowExport: mockWebflowExport,
+        }
+      : { status: "idle" }
+  );
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup polling on unmount
