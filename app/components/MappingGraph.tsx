@@ -467,7 +467,7 @@ export function MappingGraph({
   // Show empty state if no data
   if (nodes.length === 0) {
     return (
-      <div className="w-full h-[600px] border border-zinc-200 dark:border-zinc-700 rounded-lg flex items-center justify-center bg-white dark:bg-zinc-900">
+      <div className="w-full h-full min-h-[400px] border border-zinc-200 dark:border-zinc-700 rounded-lg flex items-center justify-center bg-white dark:bg-zinc-900">
         <div className="text-center">
           <p className="text-zinc-500 dark:text-zinc-400 text-lg">
             No mappings to visualize
@@ -481,7 +481,7 @@ export function MappingGraph({
   }
 
   return (
-    <div ref={containerRef} className="w-full h-[900px] border-0 rounded-lg overflow-hidden bg-transparent relative">
+    <div ref={containerRef} className="w-full h-full min-h-[400px] border-0 rounded-lg overflow-hidden bg-transparent relative">
       {/* Legend */}
       <div className="absolute top-4 left-4 z-10 bg-white dark:bg-zinc-900 border-2 border-zinc-300 dark:border-zinc-700 rounded-lg shadow-lg p-5 max-w-sm">
         <div className="flex items-start gap-2.5 mb-4">
