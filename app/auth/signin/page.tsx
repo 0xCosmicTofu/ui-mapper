@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { NeuroNoise } from "@paper-design/shaders-react";
 
 function SignInForm() {
   const router = useRouter();
@@ -64,9 +65,23 @@ function SignInForm() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Shader Background */}
+      <div className="absolute inset-0 -z-10">
+        <NeuroNoise
+          scale={1}
+          speed={0.06}
+          contrast={0.4}
+          brightness={0.05}
+          colorBack="#00000000"
+          colorMid="#1C252F"
+          colorFront="#FFFFFF"
+          className="w-full h-full"
+        />
+      </div>
+
       {/* Header */}
-      <header className="border-b">
+      <header className="border-b bg-background/80 backdrop-blur-sm relative z-10">
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -77,8 +92,8 @@ function SignInForm() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 max-w-md py-12">
-        <Card>
+      <main className="container mx-auto px-4 max-w-md py-12 relative z-10">
+        <Card className="backdrop-blur-sm bg-background/95">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl">Sign In</CardTitle>
             <CardDescription>
