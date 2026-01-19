@@ -16,7 +16,7 @@ import ReactFlow, {
   EdgeChange,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import type { ContentModel, UIComponent, PageMapping } from "@/lib/types";
+import type { ContentModel, UIComponent, PageMapping } from "@/lib/mock-data";
 import { Info } from "lucide-react";
 
 interface MappingGraphProps {

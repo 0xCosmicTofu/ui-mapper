@@ -8,7 +8,58 @@
  * Only the UI component changes should be merged.
  */
 
-import type { AnalysisResult, WebflowExport } from "./types";
+// Client-safe type definitions (avoid importing from types.ts which uses zod)
+export type ContentModel = {
+  name: string;
+  fields: Array<{ name: string; type: string; description?: string }>;
+  description?: string;
+};
+
+export type UIComponent = {
+  name: string;
+  selector: string;
+  slots: Array<{ name: string; selector: string; type: string; description?: string }>;
+  variants?: string[];
+  description?: string;
+};
+
+export type PageMapping = {
+  pageName: string;
+  componentMappings: Array<{
+    componentName: string;
+    slotMappings: Record<string, string>;
+  }>;
+};
+
+export type AnalysisResult = {
+  contentModels: ContentModel[];
+  uiComponents: UIComponent[];
+  mappings: PageMapping[];
+  metadata: {
+    url: string;
+    timestamp: string;
+    screenshotPath?: string;
+  };
+};
+
+export type WebflowExport = {
+  collections: Array<{
+    name: string;
+    slug: string;
+    fields: Array<{ name: string; type: string; slug: string }>;
+  }>;
+  symbols: Array<{
+    name: string;
+    componentName: string;
+    bindings: Record<string, string>;
+  }>;
+  pages: Array<{
+    name: string;
+    slug: string;
+    symbolInstances: Array<{ symbolName: string; collectionBinding?: string }>;
+  }>;
+  csvData?: Record<string, Array<Record<string, unknown>>>;
+};
 
 export const mockAnalysis: AnalysisResult = {
   contentModels: [

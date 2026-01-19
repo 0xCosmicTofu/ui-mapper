@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { AnalysisResult, WebflowExport } from "@/lib/types";
+import type { AnalysisResult, WebflowExport } from "@/lib/mock-data";
 import { MappingGraph } from "./components/MappingGraph";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
