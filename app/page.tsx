@@ -291,7 +291,7 @@ export default function Home() {
 
         {state.status === "error" && (
           <div className="container mx-auto px-4 max-w-[1440px]">
-          <Alert variant="destructive" className="mb-8">
+          <Alert variant="warning" className="mb-8">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{state.error}</AlertDescription>
