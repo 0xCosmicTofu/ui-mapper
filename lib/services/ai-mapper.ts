@@ -60,7 +60,7 @@ Map all slots logically. Return ONLY valid JSON.`;
     });
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:62',message:'AI response metadata',data:{finishReason:response.choices[0]?.finish_reason,hasContent:!!response.choices[0]?.message?.content,contentLength:response.choices[0]?.message?.content?.length,model:response.model},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+    console.log("[DEBUG-A,B] AI response metadata:", JSON.stringify({finishReason:response.choices[0]?.finish_reason,hasContent:!!response.choices[0]?.message?.content,contentLength:response.choices[0]?.message?.content?.length,model:response.model}));
     // #endregion
 
     const content = response.choices[0]?.message?.content;
@@ -71,7 +71,7 @@ Map all slots logically. Return ONLY valid JSON.`;
     const jsonText = content.trim();
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:75',message:'Raw JSON text',data:{length:jsonText.length,first500:jsonText.substring(0,500),last500:jsonText.substring(Math.max(0,jsonText.length-500))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D,E'})}).catch(()=>{});
+    console.log("[DEBUG-A,D,E] Raw JSON text:", JSON.stringify({length:jsonText.length,first500:jsonText.substring(0,500),last500:jsonText.substring(Math.max(0,jsonText.length-500))}));
     // #endregion
 
     // Extract JSON from markdown code blocks (improved extraction)
@@ -104,7 +104,7 @@ Map all slots logically. Return ONLY valid JSON.`;
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:105',message:'After JSON extraction',data:{extractionMethod,cleanedLength:cleanedJson.length,rawLength:jsonText.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),last100:cleanedJson.substring(Math.max(0,cleanedJson.length-100))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    console.log("[DEBUG-C] After JSON extraction:", JSON.stringify({extractionMethod,cleanedLength:cleanedJson.length,rawLength:jsonText.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),last100:cleanedJson.substring(Math.max(0,cleanedJson.length-100))}));
     // #endregion
     
     try {
@@ -112,12 +112,12 @@ Map all slots logically. Return ONLY valid JSON.`;
       // Handle both {mappings: [...]} and [...] formats
       const mappings = Array.isArray(parsed) ? parsed : (parsed.mappings || []);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:115',message:'Parse success',data:{mappingsCount:mappings.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'success'})}).catch(()=>{});
+      console.log("[DEBUG-success] Parse success:", JSON.stringify({mappingsCount:mappings.length}));
       // #endregion
       return mappings as PageMapping[];
     } catch (parseError) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:120',message:'Parse FAILED',data:{error:parseError instanceof Error ? parseError.message : String(parseError),cleanedLength:cleanedJson.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),charAtError:cleanedJson.substring(7780,7810)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C,D,E'})}).catch(()=>{});
+      console.log("[DEBUG-FAIL] Parse FAILED:", JSON.stringify({error:parseError instanceof Error ? parseError.message : String(parseError),cleanedLength:cleanedJson.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),charAtError:cleanedJson.substring(7780,7810)}));
       // #endregion
       console.error("Failed to parse mappings JSON:", parseError);
       console.error("Raw response:", jsonText);
