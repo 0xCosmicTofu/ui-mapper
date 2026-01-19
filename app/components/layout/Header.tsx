@@ -38,8 +38,8 @@ export function Header({
   };
 
   return (
-    <header className="h-14 border-b bg-background flex items-center px-4 gap-4 shrink-0">
-      {/* Logo */}
+    <header className="h-14 border-b bg-background flex items-center justify-between px-4 shrink-0">
+      {/* Logo - Left */}
       <div className="flex items-center gap-2 shrink-0">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <span className="text-primary-foreground font-bold text-sm">SF</span>
@@ -47,8 +47,8 @@ export function Header({
         <span className="font-semibold text-lg hidden sm:inline">StructureFlow</span>
       </div>
 
-      {/* URL Input - grows to fill space */}
-      <div className="flex-1 flex items-center gap-2 max-w-2xl">
+      {/* URL Input - Center */}
+      <div className="flex items-center gap-2 flex-1 max-w-2xl mx-8">
         <Input
           type="url"
           value={url}
