@@ -15,7 +15,14 @@ export async function GET(
 
   const job = jobStore.getJob(jobId);
 
+  // #region agent log
+  console.log("[DEBUG-STATUS] Job status check:", JSON.stringify({jobId, found: !!job, status: job?.status, progress: job?.progress, stage: job?.stage, allJobIds: jobStore.getAllJobIds?.() || 'N/A'}));
+  // #endregion
+
   if (!job) {
+    // #region agent log
+    console.log("[DEBUG-STATUS-404] Job not found:", JSON.stringify({jobId, timestamp: Date.now()}));
+    // #endregion
     return NextResponse.json(
       {
         success: false,
