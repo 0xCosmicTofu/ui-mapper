@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "./components/Providers";
 
 export const metadata: Metadata = {
-  title: "Webflow UI Mapper - Transform Websites to Webflow",
-  description: "Automatically map any website to Webflow Collections, Symbols, and Bindings using AI",
+  title: "StructureFlow - Transform Websites to Structured Content",
+  description: "Automatically map any website to content models, UI components, and their mappings using AI",
 };
 
 export default function RootLayout({
@@ -12,9 +13,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
