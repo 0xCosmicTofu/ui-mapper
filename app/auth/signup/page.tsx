@@ -88,7 +88,7 @@ export default function SignUpPage() {
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">Webflow UI Mapper</h1>
+              <h1 className="text-lg font-semibold">StructureFlow</h1>
             </div>
             <ThemeToggle />
           </div>
@@ -100,12 +100,12 @@ export default function SignUpPage() {
           <CardHeader className="text-center">
             <CardTitle className="text-3xl">Sign Up</CardTitle>
             <CardDescription>
-              Create your Webflow UI Mapper account
+              Create your StructureFlow account
             </CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
-              <Alert variant="destructive" className="mb-4">
+              <Alert variant="warning" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>

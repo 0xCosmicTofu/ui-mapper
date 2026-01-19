@@ -30,7 +30,7 @@ function AuthErrorContent() {
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">Webflow UI Mapper</h1>
+              <h1 className="text-lg font-semibold">StructureFlow</h1>
             </div>
             <ThemeToggle />
           </div>
@@ -60,36 +60,7 @@ function AuthErrorContent() {
               </p>
             )}
             <Button asChild className="w-full">
-              <Link 
-                href="/auth/signin"
-                prefetch={false}
-                onClick={(e) => {
-                  // #region agent log
-                  const currentUrl = window.location.href;
-                  const currentOrigin = window.location.origin;
-                  const linkElement = e.currentTarget;
-                  const resolvedHref = linkElement.getAttribute('href');
-                  const willNavigateTo = new URL(resolvedHref || '/auth/signin', currentOrigin).href;
-                  console.log('[ERROR-PAGE] Link click', {
-                    currentUrl,
-                    currentOrigin,
-                    linkHref: resolvedHref,
-                    isRelative: resolvedHref?.startsWith('/'),
-                    willNavigateTo,
-                    isSameOrigin: willNavigateTo.startsWith(currentOrigin)
-                  });
-                  fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/auth/error/page.tsx:Link:click',message:'Error page link clicked',data:{currentUrl,currentOrigin,linkHref:resolvedHref,isRelative:resolvedHref?.startsWith('/'),willNavigateTo,isSameOrigin:willNavigateTo.startsWith(currentOrigin)},timestamp:Date.now(),sessionId:'debug-session',runId:'config-error-investigation',hypothesisId:'H6'})}).catch(()=>{});
-                  // #endregion
-                  
-                  // Prevent navigation if it would go to different origin
-                  if (!willNavigateTo.startsWith(currentOrigin)) {
-                    e.preventDefault();
-                    console.error('[ERROR-PAGE] Blocked navigation to different origin', {willNavigateTo, currentOrigin});
-                    // Force relative navigation
-                    window.location.href = '/auth/signin';
-                  }
-                }}
-              >
+              <Link href="/auth/signin">
                 Return to Sign In
               </Link>
             </Button>

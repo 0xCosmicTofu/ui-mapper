@@ -38,12 +38,6 @@ class JobStore {
     return this.jobs.get(jobId);
   }
 
-  // #region agent log
-  getAllJobIds(): string[] {
-    return Array.from(this.jobs.keys());
-  }
-  // #endregion
-
   updateJob(
     jobId: string,
     updates: Partial<Omit<JobState, 'createdAt' | 'updatedAt'>>

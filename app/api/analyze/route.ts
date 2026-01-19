@@ -27,14 +27,6 @@ const AnalyzeRequestSchema = z.object({
  * The actual analysis runs in the background
  */
 export async function POST(request: NextRequest) {
-  // #region agent log
-  console.log("[DEBUG] Analyze API: Request received", {
-    location: "app/api/analyze/route.ts:POST",
-    timestamp: new Date().toISOString(),
-    hypothesisId: "E",
-  });
-  // #endregion
-
   try {
     const body = await request.json();
     const { url } = AnalyzeRequestSchema.parse(body);
@@ -45,15 +37,6 @@ export async function POST(request: NextRequest) {
     const cacheCheckDuration = Date.now() - cacheCheckStart;
     
     if (cached) {
-      // #region agent log
-      console.log("[DEBUG] Analyze API: Returning cached result", {
-        location: "app/api/analyze/route.ts:POST:cacheHit",
-        url,
-        timestamp: new Date().toISOString(),
-        hypothesisId: "CACHE",
-      });
-      // #endregion
-
       // Log cache hit performance
       console.log("[PERF] Cache hit", {
         url,
@@ -80,25 +63,9 @@ export async function POST(request: NextRequest) {
     // Create job in store
     jobStore.createJob(jobId);
 
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Starting background analysis", {
-      location: "app/api/analyze/route.ts:POST:startJob",
-      url,
-      jobId,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
-
     // Start analysis in background (don't await)
     analyzeInBackground(jobId, url).catch((error) => {
-      console.error("[DEBUG] Analyze API: Background job error", {
-        location: "app/api/analyze/route.ts:POST:backgroundError",
-        jobId,
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
-        hypothesisId: "E",
-      });
+      console.error("Background job error:", error instanceof Error ? error.message : String(error));
 
       jobStore.updateJob(jobId, {
         status: 'error',
@@ -117,17 +84,6 @@ export async function POST(request: NextRequest) {
       message: 'Analysis started',
     });
   } catch (error) {
-    // #region agent log
-    console.error("[DEBUG] Analyze API: Error occurred", {
-      location: "app/api/analyze/route.ts:POST:error",
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
-
     console.error("Analysis error:", error);
     
     if (error instanceof z.ZodError) {
@@ -168,16 +124,6 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
       message: 'Scraping site...',
     });
 
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Step 1 - Scraping", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:scrape",
-      jobId,
-      url,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
-
     const scrapeStart = Date.now();
     const scrapeResult = await analyzer.scraper.scrape(url);
     stageTimings.scraping = Date.now() - scrapeStart;
@@ -189,23 +135,12 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
     });
 
     // Step 2 & 3: Component Detection and Content Modeling (combined in single AI call)
-    // This saves ~20 seconds by eliminating one AI API call
     jobStore.updateJob(jobId, {
       progress: 30,
       stage: 'components',
       message: 'Detecting components and extracting models...',
     });
 
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Step 2 & 3 - Combined Component Detection & Content Modeling", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:componentsAndModels",
-      jobId,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
-
-    // Use combined method to get both components and models in one AI call
     const detectionStart = Date.now();
     const { components, models } = await analyzer.componentDetector.detectComponentsAndModels(
       scrapeResult.html,
@@ -219,21 +154,12 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
       message: `Found ${components.length} components and ${models.length} content models`,
     });
 
-    // Step 4: Mapping (~30s)
+    // Step 4: Mapping
     jobStore.updateJob(jobId, {
       progress: 80,
       stage: 'mappings',
       message: 'Creating mappings...',
     });
-
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Step 4 - Mapping", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:mappings",
-      jobId,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
 
     const mappingStart = Date.now();
     const mappings = await analyzer.mappingService.createMappings(
@@ -255,15 +181,6 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
       stage: 'export',
       message: 'Generating Webflow export...',
     });
-
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Step 5 - Export", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:export",
-      jobId,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
 
     const exportStart = Date.now();
     const webflowExport = analyzer.webflowExporter.exportToWebflow(
@@ -327,18 +244,6 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
       cached: false,
       timestamp: new Date().toISOString(),
     });
-
-    // #region agent log
-    console.log("[DEBUG] Analyze API: Background analysis completed", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:complete",
-      jobId,
-      componentCount: components.length,
-      modelCount: models.length,
-      mappingCount: mappings.length,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
   } catch (error) {
     // Calculate total duration even on error
     const totalDuration = Date.now() - startTime;
@@ -353,17 +258,6 @@ async function analyzeInBackground(jobId: string, url: string): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString(),
     });
-
-    // #region agent log
-    console.error("[DEBUG] Analyze API: Background analysis error", {
-      location: "app/api/analyze/route.ts:analyzeInBackground:error",
-      jobId,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString(),
-      hypothesisId: "E",
-    });
-    // #endregion
 
     jobStore.updateJob(jobId, {
       status: 'error',

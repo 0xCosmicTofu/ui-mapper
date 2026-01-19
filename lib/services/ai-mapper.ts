@@ -59,10 +59,6 @@ Map all slots logically. Return ONLY valid JSON.`;
       response_format: { type: "json_object" },
     });
 
-    // #region agent log
-    console.log("[DEBUG-A,B] AI response metadata:", JSON.stringify({finishReason:response.choices[0]?.finish_reason,hasContent:!!response.choices[0]?.message?.content,contentLength:response.choices[0]?.message?.content?.length,model:response.model}));
-    // #endregion
-
     const content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error("No response from Venice AI");
@@ -70,19 +66,13 @@ Map all slots logically. Return ONLY valid JSON.`;
 
     const jsonText = content.trim();
 
-    // #region agent log
-    console.log("[DEBUG-A,D,E] Raw JSON text:", JSON.stringify({length:jsonText.length,first500:jsonText.substring(0,500),last500:jsonText.substring(Math.max(0,jsonText.length-500))}));
-    // #endregion
-
     // Extract JSON from markdown code blocks (improved extraction)
     let cleanedJson = jsonText;
-    let extractionMethod = 'none';
 
     // Try to extract content between ```json and ``` markers
     const codeBlockMatch = jsonText.match(/```json\s*([\s\S]*?)```/);
     if (codeBlockMatch && codeBlockMatch[1]) {
       cleanedJson = codeBlockMatch[1].trim();
-      extractionMethod = 'codeBlockMatch';
     } else {
       // Fallback: remove markdown code block markers if present
       cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -94,31 +84,17 @@ Map all slots logically. Return ONLY valid JSON.`;
       
       if (jsonArrayMatch) {
         cleanedJson = jsonArrayMatch[1];
-        extractionMethod = 'jsonArrayMatch';
       } else if (jsonObjectMatch) {
         cleanedJson = jsonObjectMatch[1];
-        extractionMethod = 'jsonObjectMatch';
-      } else {
-        extractionMethod = 'fallbackClean';
       }
     }
-
-    // #region agent log
-    console.log("[DEBUG-C] After JSON extraction:", JSON.stringify({extractionMethod,cleanedLength:cleanedJson.length,rawLength:jsonText.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),last100:cleanedJson.substring(Math.max(0,cleanedJson.length-100))}));
-    // #endregion
     
     try {
       const parsed = JSON.parse(cleanedJson);
       // Handle both {mappings: [...]} and [...] formats
       const mappings = Array.isArray(parsed) ? parsed : (parsed.mappings || []);
-      // #region agent log
-      console.log("[DEBUG-success] Parse success:", JSON.stringify({mappingsCount:mappings.length}));
-      // #endregion
       return mappings as PageMapping[];
     } catch (parseError) {
-      // #region agent log
-      console.log("[DEBUG-FAIL] Parse FAILED:", JSON.stringify({error:parseError instanceof Error ? parseError.message : String(parseError),cleanedLength:cleanedJson.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),charAtError:cleanedJson.substring(7780,7810)}));
-      // #endregion
       console.error("Failed to parse mappings JSON:", parseError);
       console.error("Raw response:", jsonText);
       console.error("Cleaned JSON attempt:", cleanedJson.substring(0, 1000));
