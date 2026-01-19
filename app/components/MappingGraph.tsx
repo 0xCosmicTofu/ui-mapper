@@ -292,7 +292,8 @@ export function MappingGraph({
           background: "#f3e8ff",
           border: "3px solid #8b5cf6",
           borderRadius: "10px",
-          width: 340,
+          minWidth: 300,
+          width: 'auto',
           minHeight: 140,
         },
       });
@@ -353,7 +354,8 @@ export function MappingGraph({
             background: "#dbeafe",
             border: "3px solid #3b82f6",
             borderRadius: "10px",
-            width: 300,
+            minWidth: 280,
+            width: 'auto',
             minHeight: 140,
         },
         });
