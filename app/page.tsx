@@ -303,11 +303,11 @@ export default function Home() {
           <div className="space-y-10">
             {/* Export Actions */}
             <div className="container mx-auto px-4 max-w-[1440px]">
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="p-0 pb-4">
                 <CardTitle>Export Options</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div>
                   <h3 className="text-sm font-semibold mb-2">
                     Generic Export (Platform-Agnostic)
@@ -352,14 +352,14 @@ export default function Home() {
 
             {/* Visual Graph */}
             <div className="container mx-auto px-4 max-w-[1440px]">
-              <Card>
-                <CardHeader>
+              <Card className="border-0 shadow-none">
+                <CardHeader className="p-0 pb-4">
                   <CardTitle>Mapping Visualization</CardTitle>
                   <CardDescription>
                 Interactive graph showing relationships between content models and UI components
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 pt-0">
               <MappingGraph
                 models={state.analysis.contentModels}
                 components={state.analysis.uiComponents}
@@ -371,8 +371,8 @@ export default function Home() {
 
             {/* Mappings - Moved right after Visualization */}
             <div className="container mx-auto px-4 max-w-[1440px]">
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="p-0 pb-4">
                 <div className="flex items-center gap-2">
                   <CardTitle>Mappings</CardTitle>
                   <Badge variant="secondary">
@@ -380,7 +380,7 @@ export default function Home() {
                   </Badge>
                         </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-3">
                 {state.analysis.mappings.map((mapping, mappingIndex) => (
                     <Card key={`mapping-${mapping.pageName}-${mappingIndex}`} className="border">
@@ -473,8 +473,8 @@ export default function Home() {
 
             {/* Content Models */}
             <div className="container mx-auto px-4 max-w-[1440px]">
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="p-0 pb-4">
                 <div className="flex items-center gap-2">
                   <CardTitle>Content Models</CardTitle>
                   <Badge variant="secondary">
@@ -482,7 +482,7 @@ export default function Home() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-3">
                   {state.analysis.contentModels.map((model, modelIndex) => (
                     <Card key={`model-${model.name}-${modelIndex}`} className="border">
@@ -511,8 +511,8 @@ export default function Home() {
 
             {/* UI Components */}
             <div className="container mx-auto px-4 max-w-[1440px]">
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="p-0 pb-4">
                 <div className="flex items-center gap-2">
                   <CardTitle>UI Components</CardTitle>
                   <Badge variant="secondary">
@@ -520,7 +520,7 @@ export default function Home() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-3">
                   {state.analysis.uiComponents.map((component, componentIndex) => (
                     <Card key={`component-${component.name}-${componentIndex}`} className="border">
@@ -553,11 +553,11 @@ export default function Home() {
             {/* Screenshot */}
             {state.analysis.metadata.screenshotPath && (
               <div className="container mx-auto px-4 max-w-[1440px]">
-                <Card>
-                  <CardHeader>
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="p-0 pb-4">
                     <CardTitle>Screenshot</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                 <img
                   src={state.analysis.metadata.screenshotPath}
                   alt="Website screenshot"
