@@ -59,6 +59,10 @@ Map all slots logically. Return ONLY valid JSON.`;
       response_format: { type: "json_object" },
     });
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:62',message:'AI response metadata',data:{finishReason:response.choices[0]?.finish_reason,hasContent:!!response.choices[0]?.message?.content,contentLength:response.choices[0]?.message?.content?.length,model:response.model},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+    // #endregion
+
     const content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error("No response from Venice AI");
@@ -66,13 +70,19 @@ Map all slots logically. Return ONLY valid JSON.`;
 
     const jsonText = content.trim();
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:75',message:'Raw JSON text',data:{length:jsonText.length,first500:jsonText.substring(0,500),last500:jsonText.substring(Math.max(0,jsonText.length-500))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D,E'})}).catch(()=>{});
+    // #endregion
+
     // Extract JSON from markdown code blocks (improved extraction)
     let cleanedJson = jsonText;
+    let extractionMethod = 'none';
 
     // Try to extract content between ```json and ``` markers
     const codeBlockMatch = jsonText.match(/```json\s*([\s\S]*?)```/);
     if (codeBlockMatch && codeBlockMatch[1]) {
       cleanedJson = codeBlockMatch[1].trim();
+      extractionMethod = 'codeBlockMatch';
     } else {
       // Fallback: remove markdown code block markers if present
       cleanedJson = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -84,17 +94,31 @@ Map all slots logically. Return ONLY valid JSON.`;
       
       if (jsonArrayMatch) {
         cleanedJson = jsonArrayMatch[1];
+        extractionMethod = 'jsonArrayMatch';
       } else if (jsonObjectMatch) {
         cleanedJson = jsonObjectMatch[1];
+        extractionMethod = 'jsonObjectMatch';
+      } else {
+        extractionMethod = 'fallbackClean';
       }
     }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:105',message:'After JSON extraction',data:{extractionMethod,cleanedLength:cleanedJson.length,rawLength:jsonText.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),last100:cleanedJson.substring(Math.max(0,cleanedJson.length-100))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     
     try {
       const parsed = JSON.parse(cleanedJson);
       // Handle both {mappings: [...]} and [...] formats
       const mappings = Array.isArray(parsed) ? parsed : (parsed.mappings || []);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:115',message:'Parse success',data:{mappingsCount:mappings.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'success'})}).catch(()=>{});
+      // #endregion
       return mappings as PageMapping[];
     } catch (parseError) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/cefeb5be-19ce-47e2-aae9-b6a86c063e28',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-mapper.ts:120',message:'Parse FAILED',data:{error:parseError instanceof Error ? parseError.message : String(parseError),cleanedLength:cleanedJson.length,endsWithBracket:cleanedJson.endsWith(']')||cleanedJson.endsWith('}'),charAtError:cleanedJson.substring(7780,7810)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C,D,E'})}).catch(()=>{});
+      // #endregion
       console.error("Failed to parse mappings JSON:", parseError);
       console.error("Raw response:", jsonText);
       console.error("Cleaned JSON attempt:", cleanedJson.substring(0, 1000));
